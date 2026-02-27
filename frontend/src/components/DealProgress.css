@@ -1,0 +1,59 @@
+.deal-progress-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.step-label {
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+  transition: color 0.3s ease;
+}
+
+.step-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ccc;
+  transition: background 0.3s ease;
+}
+
+.step.complete .step-circle {
+  background: #28a745;
+}
+
+.step.complete .step-label {
+  color: #28a745;
+}
+
+.connector {
+  flex: 1;
+  height: 4px;
+  background: #ccc;
+  transition: background 0.3s ease;
+}
+
+.connector.complete {
+  background: #28a745;
+}
+
+/* make it responsive */
+@media (max-width: 600px) {
+  .step-label {
+    font-size: 0.7rem;
+  }
+  .step-circle {
+    width: 12px;
+    height: 12px;
+  }
+}

@@ -1,0 +1,217 @@
+.document-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  overflow-y: auto;
+  padding: 40px;
+}
+
+.document-modal-content {
+  width: 100%;
+  max-width: 900px;
+  background: white !important;
+  color: black !important;
+  border-radius: 20px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+  overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-tools {
+  padding: 15px 30px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+}
+
+.doc-close-btn, .doc-print-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  font-size: 13px;
+}
+
+.doc-close-btn { background: #cbd5e1; color: #1e293b; }
+.doc-print-btn { background: #6366f1; color: white; }
+
+.printable-document {
+  padding: 60px 80px;
+  overflow-y: auto;
+  flex: 1;
+  background: white;
+}
+
+.doc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.doc-logo {
+  font-size: 32px;
+  font-weight: 900;
+  background: #6366f1;
+  color: white;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.doc-title-block {
+  text-align: right;
+}
+
+.doc-title-block h1 {
+  font-size: 28px;
+  font-weight: 900;
+  margin-bottom: 5px;
+  color: #1e293b;
+}
+
+.doc-parties {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  gap: 40px;
+}
+
+.party-block {
+  flex: 1;
+}
+
+.party-block h3 {
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.party-block p {
+  font-size: 14px;
+  margin: 2px 0;
+  color: #1e293b;
+}
+
+.doc-body {
+  margin-bottom: 40px;
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+}
+
+.doc-table th {
+  background: #f8fafc;
+  padding: 12px;
+  text-align: left;
+  border-bottom: 2px solid #e2e8f0;
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.doc-table td {
+  padding: 15px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.doc-totals {
+  text-align: right;
+}
+
+.doc-totals p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 5px 0;
+}
+
+.grand-total {
+  font-size: 24px;
+  font-weight: 900;
+  color: #6366f1;
+  margin-top: 15px;
+}
+
+.agreement-text h4 {
+    margin: 24px 0 10px;
+    font-size: 14px;
+    color: #1e293b;
+}
+
+.agreement-text p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #475569;
+}
+
+.signatures-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 40px;
+    gap: 40px;
+}
+
+.sig-box {
+    flex: 1;
+    border-top: 2px solid #e2e8f0;
+    padding-top: 15px;
+}
+
+.sig-box p {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.digital-sig {
+    font-family: 'Dancing Script', cursive, serif;
+    font-size: 24px;
+    color: #6366f1;
+    margin: 10px 0;
+}
+
+.sig-box span {
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: #10b981;
+}
+
+.doc-footer {
+  margin-top: 60px;
+  padding-top: 20px;
+  border-top: 1px solid #f1f5f9;
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+@media print {
+  .noprint { display: none !important; }
+  .document-modal-overlay { padding: 0; background: white; position: absolute; }
+  .document-modal-content { max-height: none; width: 100%; box-shadow: none; border: none; }
+  .printable-document { padding: 0 !important; }
+}

@@ -1,0 +1,196 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  color-scheme: dark;
+  /* --- Shared Accents --- */
+  --color-primary: 243 75% 59%;    /* #6366f1 */
+  --color-primary-dark: 239 84% 67%;
+  --color-secondary: 188 86% 43%;   /* #06b6d4 */
+  --color-accent: 38 92% 50%;       /* #f59e0b */
+  --brand-gradient: linear-gradient(135deg, hsl(var(--color-primary)) 0%, #a855f7 100%);
+  
+  /* --- Dark Theme Palette (Default) --- */
+  --bg-app: 240 10% 3.9%;          /* #09090b */
+  --bg-surface: 240 5.9% 10%;      /* #18181b */
+  --bg-card: 240 5.9% 10%;
+  --bg-muted: 240 4.8% 15.1%;
+  --bg-input: 240 5.9% 7%;
+  --bg-glass: rgba(9, 9, 11, 0.75);
+  
+  --text-main: 0 0% 98%;           /* #fafafa */
+  --text-muted: 240 5% 64.9%;      /* #a1a1aa */
+  --text-inverse: 240 10% 3.9%;
+  
+  --border-main: 240 3.7% 15.9%;   /* #27272a */
+  --border-muted: 240 3.7% 12%;
+  
+  --shadow-color: 0 0% 0%;
+  --shadow-strength: 40%;
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --shadow-glow: 0 0 20px hsla(var(--color-primary), 0.25);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg-app: 210 40% 98.5%;        /* #f8fafc */
+  --bg-surface: 0 0% 100%;         /* #ffffff */
+  --bg-card: 0 0% 100%;
+  --bg-muted: 210 40% 96.1%;
+  --bg-input: 210 40% 95%;        /* Darkened slightly for better input contrast */
+  --bg-glass: rgba(255, 255, 255, 0.7);
+  
+  --text-main: 222 47% 11.2%;      /* #0f172a */
+  --text-muted: 215 25% 40%;       /* Darkened for better readability */
+  --text-inverse: 0 0% 98%;
+  
+  --border-main: 214 32% 91%;      /* #e2e8f0 */
+  --border-muted: 214 32% 85%;
+  
+  --shadow-color: 222 47% 11.2%;
+  --shadow-strength: 10%;
+}
+
+/* Fix global neon glow issues */
+.login-decoration .glass-shape,
+.register-decoration .glass-shape {
+  opacity: 0.05 !important;
+  mix-blend-mode: multiply;
+}
+
+:root[data-theme='dark'] .login-decoration .glass-shape,
+:root[data-theme='dark'] .register-decoration .glass-shape {
+  opacity: 0.1 !important;
+  mix-blend-mode: screen;
+}
+
+/* Base Variable Aliases */
+:root {
+  --background: hsl(var(--bg-app));
+  --foreground: hsl(var(--text-main));
+  --card: hsl(var(--bg-card));
+  --card-foreground: hsl(var(--text-main));
+  --muted: hsl(var(--bg-muted));
+  --muted-foreground: hsl(var(--text-muted));
+  --border: hsl(var(--border-main));
+  --input: hsl(var(--bg-input));
+  --primary: hsl(var(--color-primary));
+  --primary-foreground: hsl(var(--text-inverse));
+  --primary-gradient: var(--brand-gradient);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button, input, select, textarea, div, section, header {
+  transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+              color 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+input, select, textarea {
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+select option {
+  background: var(--card);
+  color: var(--foreground);
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border: 3px solid var(--background);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Glassmorphism Utility */
+.glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--border);
+}
+
+.glass-dark {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--border);
+}
+
+/* ===== NEW: Theme-Aware Shadow Utility ===== */
+.shadow-premium {
+  box-shadow: 0 10px 40px -10px rgba(var(--shadow-color), 0.2),
+              0 0 1px 1px rgba(var(--shadow-color), 0.05);
+}
+
+/* ===== PROFILE LINK ===== */
+.profile-link {
+  cursor: pointer;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  border-bottom: 1px dashed hsla(var(--color-primary), 0.4);
+  transition: all 0.2s;
+  display: inline-block;
+}
+.profile-link:hover {
+  border-bottom-style: solid;
+  filter: brightness(1.2);
+}

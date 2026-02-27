@@ -1,0 +1,20 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+passlib[bcrypt]
+bcrypt==3.2.0
+python-dotenv
+email-validator
+python-jose[cryptography]
+pydantic-settings
+razorpay
+slowapi
+python-multipart
+
+# Testing
+pytest
+pytest-asyncio
+httpx
+pytest-cov
+pytest-mock

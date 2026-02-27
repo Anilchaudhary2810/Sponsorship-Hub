@@ -1,0 +1,141 @@
+.review-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.review-modal-content {
+  width: 100%;
+  max-width: 450px;
+  padding: 40px;
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  color: #f8fafc;
+}
+
+.review-modal-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.review-modal-header h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.review-modal-header p {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.review-modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 24px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.review-modal-close:hover {
+  color: #f8fafc;
+}
+
+.rating-selector {
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.rating-selector label {
+  display: block;
+  margin-bottom: 15px;
+  font-weight: 500;
+  color: #cbd5e1;
+}
+
+.star-rating {
+  font-size: 36px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.star {
+  cursor: pointer;
+  color: #334155;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.star.filled {
+  color: #fbbf24;
+  text-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+}
+
+.star:hover {
+  transform: scale(1.2);
+}
+
+.comment-box label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #cbd5e1;
+}
+
+.comment-box textarea {
+  width: 100%;
+  padding: 15px;
+  border: 1px solid rgba(251, 191, 36, 0.1);
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 12px;
+  color: #f8fafc;
+  font-family: inherit;
+  resize: none;
+  transition: all 0.3s;
+}
+
+.comment-box textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+  background: rgba(15, 23, 42, 0.8);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.1);
+}
+
+.submit-review-btn {
+  width: 100%;
+  margin-top: 30px;
+  padding: 14px;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.submit-review-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+}
+
+.submit-review-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
