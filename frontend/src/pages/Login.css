@@ -173,3 +173,10 @@
   bottom: -100px;
   left: -100px;
 }
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 32px 24px;
+    width: 95vw;
+  }
+}

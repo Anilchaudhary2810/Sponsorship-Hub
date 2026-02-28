@@ -138,8 +138,14 @@
 
 .deal-pipeline-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
   gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .deal-pipeline-grid {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
 }
 
 .deal-card-content-wide h4 {
@@ -205,8 +211,14 @@
 
 .event-horizontal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
   gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .event-horizontal-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
 }
 
 .event-card-modern {
@@ -320,6 +332,16 @@
 @media (max-width: 1024px) {
   .dashboard-header-horizontal { flex-direction: column; align-items: flex-start; gap: 24px; }
   .sponsor-container { padding: 20px; }
+  .header-actions { flex-direction: column; width: 100%; align-items: stretch; }
+  .header-filters { flex-direction: column; align-items: stretch; width: 100%; }
+  .horizontal-select, .create-primary-btn { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .sponsor-title { font-size: 28px; }
+  .dashboard-section-wide { padding: 20px; }
+  .deal-actions-row, .marketplace-actions-row { flex-direction: column; }
+  .accept-pill-btn, .reject-pill-btn, .mini-action-btn { width: 100%; }
 }
 
 .delete-confirm-btn.proposal-btn {
@@ -406,9 +428,15 @@
 
 .creator-horizontal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
   gap: 24px;
   margin-top: 10px;
+}
+
+@media (min-width: 768px) {
+  .creator-horizontal-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
 }
 
 .creator-card-modern {

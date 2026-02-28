@@ -319,11 +319,32 @@
 
 @media (max-width: 768px) {
   .navbar {
-    padding: 0 20px;
+    padding: 0 16px;
   }
   
-  .navbar-left h2, .navbar-center {
+  .navbar-left h2 {
     display: none;
+  }
+
+  .navbar-role-chip {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .profile-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar-center {
+    display: none;
+  }
+  
+  .profile-popover {
+    width: 280px;
+    right: -20px;
   }
 }
 

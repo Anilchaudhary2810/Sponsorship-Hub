@@ -433,4 +433,12 @@
 
 @media (max-width: 600px) {
   .profile-stats-row { grid-template-columns: 1fr 1fr; }
+  .reviews-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .profile-stats-row { grid-template-columns: 1fr; }
+  .profile-avatar { width: 80px; height: 80px; font-size: 32px; }
+  .profile-name { font-size: 24px; }
+  .profile-hero { padding: 24px; }
 }

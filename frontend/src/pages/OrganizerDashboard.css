@@ -196,20 +196,38 @@
 
 .deal-pipeline-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
   gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .deal-pipeline-grid {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
 }
 
 .dual-section-row {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr;
   gap: 32px;
+}
+
+@media (min-width: 1024px) {
+  .dual-section-row {
+    grid-template-columns: 2fr 1fr;
+  }
 }
 
 .sponsor-horizontal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
   gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .sponsor-horizontal-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
 }
 
 .sponsor-card-modern {
@@ -421,9 +439,16 @@
 }
 
 @media (max-width: 1024px) {
-  .dual-section-row { grid-template-columns: 1fr; }
   .organizer-container { padding: 20px; }
   .dashboard-header-horizontal { flex-direction: column; align-items: flex-start; gap: 24px; }
+  .header-actions { flex-direction: column; width: 100%; align-items: stretch; }
+  .create-primary-btn { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .organizer-title { font-size: 28px; }
+  .dashboard-section-wide { padding: 20px; }
+  .event-row-modern { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
 
 .view-deal-btn {

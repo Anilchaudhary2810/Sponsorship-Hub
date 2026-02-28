@@ -190,3 +190,12 @@
   bottom: -150px;
   left: -150px;
 }
+
+@media (max-width: 480px) {
+  .register-card {
+    padding: 32px 20px;
+  }
+  .register-title {
+    font-size: 26px;
+  }
+}
