@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # CORS — must list explicit origins when allow_credentials=True (wildcard is invalid)
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(".env", "backend/.env", "../.env"),
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
 settings = Settings()

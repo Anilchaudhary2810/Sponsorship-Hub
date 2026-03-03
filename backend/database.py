@@ -1,16 +1,27 @@
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from dotenv import load_dotenv
+from .config import settings
+from .logger import logger
 
-load_dotenv()
+DATABASE_URL = settings.DATABASE_URL
+# Redact password for security in logs
+redacted_url = DATABASE_URL
+if "@" in DATABASE_URL:
+    try:
+        prefix, rest = DATABASE_URL.split("://", 1)
+        auth, host = rest.split("@", 1)
+        if ":" in auth:
+            user, _ = auth.split(":", 1)
+            redacted_url = f"{prefix}://{user}:****@{host}"
+    except Exception:
+        pass
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    # fallback to a local sqlite file for development/testing purposes
-    DATABASE_URL = "sqlite:///./sponsorship.db"
+logger.info(f"Connecting to database: {redacted_url}")
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {})
+engine = create_engine(
+    DATABASE_URL, 
+    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+)
 
 SessionLocal = sessionmaker(
     autocommit=False,
