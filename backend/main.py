@@ -37,8 +37,8 @@ from slowapi.errors import RateLimitExceeded
 app = FastAPI(
     title=settings.APP_NAME,
     debug=settings.DEBUG,
-    docs_url="/docs" if settings.ENV == "development" else None,
-    redoc_url="/redoc" if settings.ENV == "development" else None
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # -------------------------------------------------
