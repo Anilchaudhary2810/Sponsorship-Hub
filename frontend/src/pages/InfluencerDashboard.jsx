@@ -20,6 +20,7 @@ import {
 } from "../services/api";
 import AgreementModal from "../components/AgreementModal";
 import ReviewModal from "../components/ReviewModal";
+import DocumentViewer from "../components/DocumentViewer";
 
 const InfluencerDashboard = () => {
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ const InfluencerDashboard = () => {
   const [reviewedDeals, setReviewedDeals] = useState({}); // { dealId: rating }
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showDocument, setShowDocument] = useState(null);
 
   const loadData = async () => {
     try {
@@ -128,7 +130,13 @@ const InfluencerDashboard = () => {
   const stats = [
     { title: "Live Campaigns", value: campaigns.length },
     { title: "Active Deals", value: deals.filter(d => d.status !== 'closed' && d.status !== 'rejected').length },
-    { title: "Projected Earnings", value: formatCurrency(deals.filter(d => d.status === 'signed').reduce((s, d) => s + (Number(d.paymentAmount) || 0), 0)) },
+    { title: "Projected Earnings", value: formatCurrency(deals
+      .filter(d => d.status !== 'rejected' && d.status !== 'closed')
+      .reduce((sum, d) => {
+        const amount = Number(d.paymentAmount) || Number(d.campaign?.budget) || 0;
+        return sum + amount;
+      }, 0)) 
+    },
   ];
 
   return (
@@ -188,9 +196,14 @@ const InfluencerDashboard = () => {
                         {deal.paymentDone && !deal.influencerSigned && (
                           <button className="mini-action-btn legal" onClick={() => handleStartSigning(deal)}>📄 Sign</button>
                         )}
-                        {deal.influencerSigned && (
-                          <button className="mini-action-btn primary-outline" onClick={() => handleStartSigning(deal)}>📄 Agreement</button>
-                        )}
+                        <div className="doc-buttons-group" style={{ display: 'flex', gap: '4px' }}>
+                          {deal.influencerSigned && (
+                            <button className="mini-action-btn legal-outline" onClick={() => setShowDocument({ type: 'agreement', deal })}>📄 Agreement</button>
+                          )}
+                          {deal.paymentDone && (
+                            <button className="mini-action-btn primary-outline" onClick={() => setShowDocument({ type: 'invoice', deal })}>🧾 Invoice</button>
+                          )}
+                        </div>
                         {deal.status === 'closed' && (
                           reviewedDeals[deal.id] ? (
                             <div className="reviewed-badge">
@@ -290,6 +303,13 @@ const InfluencerDashboard = () => {
           targetRole="sponsor" 
           onSubmit={handleReviewSubmit} 
           onClose={() => setShowReviewModal(false)} 
+        />
+      )}
+      {showDocument && (
+        <DocumentViewer 
+            type={showDocument.type} 
+            deal={showDocument.deal} 
+            onClose={() => setShowDocument(null)} 
         />
       )}
     </div>

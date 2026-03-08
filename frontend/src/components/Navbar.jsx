@@ -21,7 +21,14 @@ const Navbar = ({ role }) => {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    if (!document.startViewTransition) {
+      setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+      return;
+    }
+    
+    document.startViewTransition(() => {
+      setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    });
   };
 
   const profilePanelRef = useRef(null);
@@ -294,7 +301,10 @@ const Navbar = ({ role }) => {
         </div>
 
         <button className="theme-toggle-btn" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
-          {theme === 'dark' ? '🌞' : '🌙'}
+          <div className="icon-wrapper">
+            <span className="sun">🌞</span>
+            <span className="moon">🌙</span>
+          </div>
         </button>
       </div>
     </div>

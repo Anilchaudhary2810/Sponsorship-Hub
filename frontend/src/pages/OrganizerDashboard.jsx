@@ -26,6 +26,7 @@ import {
   updateEvent,
 } from "../services/api";
 import ReviewModal from "../components/ReviewModal";
+import DocumentViewer from "../components/DocumentViewer";
 
 const OrganizerDashboard = () => {
   const navigate = useNavigate();
@@ -57,6 +58,7 @@ const OrganizerDashboard = () => {
   const [currentUser] = useState(() => JSON.parse(localStorage.getItem("currentUser") || "{}"));
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showDocument, setShowDocument] = useState(null);
 
   const loadData = async () => {
     try {
@@ -375,6 +377,14 @@ const OrganizerDashboard = () => {
                           </>
                         )}
                         {deal.paymentDone && !deal.organizerSigned && <button className="mini-action-btn legal" onClick={() => handleStartSigning(deal)}>Sign</button>}
+                        <div className="doc-buttons-group" style={{ display: 'flex', gap: '4px' }}>
+                          {deal.organizerSigned && (
+                            <button className="mini-action-btn legal-outline" onClick={() => setShowDocument({ type: 'agreement', deal })}>📄 Agreement</button>
+                          )}
+                          {deal.paymentDone && (
+                            <button className="mini-action-btn primary-outline" onClick={() => setShowDocument({ type: 'invoice', deal })}>🧾 Invoice</button>
+                          )}
+                        </div>
                         {deal.status === 'closed' && (
                           reviewedDeals[deal.id] ? (
                             <div className="reviewed-badge">
@@ -582,6 +592,13 @@ const OrganizerDashboard = () => {
             </div>
           </div>
         </div>
+      )}
+      {showDocument && (
+        <DocumentViewer 
+            type={showDocument.type} 
+            deal={showDocument.deal} 
+            onClose={() => setShowDocument(null)} 
+        />
       )}
     </div>
   );
