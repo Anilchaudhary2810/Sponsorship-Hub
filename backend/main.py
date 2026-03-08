@@ -198,12 +198,19 @@ async def set_secure_headers(request: Request, call_next):
 # ALLOWED_ORIGINS is also used by the exception handlers above to manually inject
 # CORS headers on error responses (which bypass the middleware stack).
 ALLOWED_ORIGINS = list(settings.CORS_ORIGINS)
-if "*" in ALLOWED_ORIGINS:
-    # Wildcard is not allowed with credentials; replace with the known dev origins
-    ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
-# Always ensure the standard Vite dev server origin is included
-for _origin in ["http://localhost:5173", "http://127.0.0.1:5173"]:
+if "*" in ALLOWED_ORIGINS:
+    ALLOWED_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://sponsorship-hub.vercel.app"
+    ]
+
+for _origin in [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://sponsorship-hub.vercel.app"
+]:
     if _origin not in ALLOWED_ORIGINS:
         ALLOWED_ORIGINS.append(_origin)
 
