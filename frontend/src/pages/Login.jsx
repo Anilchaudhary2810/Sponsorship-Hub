@@ -22,6 +22,20 @@ const Login = () => {
     }
   }, []);
 
+  // Use a second effect to check for existing login and redirect
+  // This handles the "landing on /login when already authed" case
+  React.useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    const user = JSON.parse(localStorage.getItem("currentUser") || "null");
+    if (token && user) {
+      const role = user.role?.toLowerCase();
+      if (role === "sponsor") navigate("/sponsor-dashboard");
+      else if (role === "organizer") navigate("/organizer-dashboard");
+      else if (role === "influencer") navigate("/influencer-dashboard");
+      // If valid role not found, we just stay at login
+    }
+  }, [navigate]);
+
   if (showSplash) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
@@ -45,9 +59,10 @@ const Login = () => {
       
       toast.success(`Welcome back, ${user.full_name}!`);
 
-      if (user.role === "sponsor") navigate("/sponsor-dashboard");
-      else if (user.role === "organizer") navigate("/organizer-dashboard");
-      else if (user.role === "influencer") navigate("/influencer-dashboard");
+      const role = user.role?.toLowerCase();
+      if (role === "sponsor") navigate("/sponsor-dashboard");
+      else if (role === "organizer") navigate("/organizer-dashboard");
+      else if (role === "influencer") navigate("/influencer-dashboard");
       else navigate("/login");
     } catch (err) {
       console.error("Login error:", err);
@@ -113,6 +128,11 @@ const Login = () => {
             Don't have an account?{" "}
             <span className="register-link-span" onClick={() => navigate("/register")}>
               Create one for free
+            </span>
+          </p>
+          <p style={{ marginTop: '0.5rem' }}>
+            <span className="register-link-span" style={{ fontSize: '0.8rem', opacity: 0.7 }} onClick={() => navigate("/")}>
+              ← Back to Homepage
             </span>
           </p>
         </div>

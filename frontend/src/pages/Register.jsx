@@ -72,8 +72,9 @@ const Register = () => {
       localStorage.setItem("currentUser", JSON.stringify(user));
       toast.success("Registration successful! Welcome aboard 🎉");
       
-      if (user.role === "sponsor") navigate("/sponsor-dashboard");
-      else if (user.role === "organizer") navigate("/organizer-dashboard");
+      const roleStr = user.role?.toLowerCase();
+      if (roleStr === "sponsor") navigate("/sponsor-dashboard");
+      else if (roleStr === "organizer") navigate("/organizer-dashboard");
       else navigate("/influencer-dashboard");
     } catch (err) {
       console.error("Registration error:", err);
@@ -164,6 +165,11 @@ const Register = () => {
           <button type="submit" className="register-button">Register as {role || 'User'}</button>
           <p className="register-link">
             Already have an account? <span onClick={() => navigate("/login")}>Login</span>
+          </p>
+          <p className="register-link" style={{ marginTop: '0.5rem' }}>
+            <span style={{ fontSize: '0.8rem', opacity: 0.7 }} onClick={() => navigate("/")}>
+              ← Back to Homepage
+            </span>
           </p>
         </form>
       </div>

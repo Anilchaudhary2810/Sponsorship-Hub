@@ -23,33 +23,40 @@ const PrivateRoute = ({ role, children }) => {
         }
 
         // check token expiry from JWT payload
-        // JWT payload is the middle part between dots
+        // JWT uses base64url (not standard base64) — must convert before atob()
         try {
-          const payload = JSON.parse(
-            atob(token.split(".")[1])
-          );
+          const base64url = token.split(".")[1];
+          // base64url → base64: replace URL-safe chars and add padding
+          const base64 = base64url
+            .replace(/-/g, "+")
+            .replace(/_/g, "/")
+            .padEnd(base64url.length + ((4 - (base64url.length % 4)) % 4), "=");
+          
+          // Robust UTF-8 decoding for atob
+          const payload = JSON.parse(decodeURIComponent(escape(atob(base64))));
           const now = Math.floor(Date.now() / 1000);
+          
           if (payload.exp && payload.exp < now) {
-            // token expired — clear storage
+            // token is provably expired — clear storage and redirect
             localStorage.removeItem("authToken");
             localStorage.removeItem("currentUser");
             setIsValid(false);
             setIsChecking(false);
             return;
           }
-        } catch {
-          // if we cant decode token, reject it
-          localStorage.removeItem("authToken");
-          localStorage.removeItem("currentUser");
-          setIsValid(false);
+          
+          // Token is valid (not expired)
+          setUserRole(currentUser.role);
+          setIsValid(true);
           setIsChecking(false);
-          return;
+        } catch {
+          // Cannot decode token payload — we'll trust it anyway and let the
+          // server reject it on a real API call if it's truly bad.
+          // This avoids the login-redirect loop if the browser has trouble decoding.
+          setUserRole(currentUser.role);
+          setIsValid(true);
+          setIsChecking(false);
         }
-
-        setUserRole(currentUser.role);
-        setIsValid(true);
-        setIsChecking(false);
-
       } catch {
         setIsValid(false);
         setIsChecking(false);
@@ -79,7 +86,7 @@ const PrivateRoute = ({ role, children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (role && userRole !== role) {
+  if (role && userRole?.toLowerCase() !== role?.toLowerCase()) {
     return <Navigate to="/login" replace />;
   }
 

@@ -10,6 +10,8 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("authToken");
   if (token) {
+    // Explicitly set the Authorization header for all requests
+    config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -43,8 +45,15 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem("authToken");
       localStorage.removeItem("currentUser");
-      if (!window.location.pathname.includes("/login")) {
-        window.location.href = "/login";
+      // Let the PrivateRoute or local components handle the redirect via state changes
+      // to avoid hard page refreshes that can cause race conditions.
+      // Custom backend shape: { error, message, code }
+      const errorMessage = error.response?.data?.message || error.response?.data?.detail;
+      
+      if (errorMessage) {
+        toast.error(`Authentication failed: ${errorMessage}`);
+      } else {
+        toast.error("Authentication failed. Please log in again.");
       }
     }
 

@@ -70,6 +70,9 @@ const SponsorDashboard = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   const loadData = async () => {
+    // Only proceed if we have a token
+    if (!localStorage.getItem("authToken")) return;
+
     try {
       const [eventsResp, dealsResp, influencersResp, campaignsResp] = await Promise.all([
         fetchEvents(), 
@@ -111,36 +114,12 @@ const SponsorDashboard = () => {
   };
 
   useEffect(() => {
-    // 0. Force sync currentUser from localStorage to catch any post-login/register updates
-    const userFromStorage = JSON.parse(localStorage.getItem("currentUser") || "{}");
-    
-    loadData();
+    // Load dashboard data with a small delay to ensure auth state is stable
+    const timer = setTimeout(() => {
+      loadData();
+    }, 300);
 
-    // Setup real-time notifications
-    const token = localStorage.getItem("authToken");
-    const userId = userFromStorage.id;
-    if (!userId || !token) return;
-
-    const apiBase = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-    const wsHost = apiBase.replace(/^http/, "ws");
-    const wsUrl = `${wsHost}/ws/notifications/${userId}?token=${token}`;
-    const socket = new WebSocket(wsUrl);
-    
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("Real-time Update:", data);
-      
-      if (data.type === "MARKETPLACE_REFRESH") {
-        loadData(); // Re-fetch all if marketplace changes
-      } else if (data.type === "DEAL_UPDATE") {
-        refreshDeals();
-      }
-    };
-
-    socket.onclose = () => console.log("Notification Socket closed");
-    socket.onerror = (err) => console.error("Notification Socket error:", err);
-
-    return () => socket.close();
+    return () => clearTimeout(timer);
   }, [currentUser.id]);
 
   const refreshDeals = async () => {

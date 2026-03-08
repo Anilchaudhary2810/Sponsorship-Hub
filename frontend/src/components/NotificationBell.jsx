@@ -45,8 +45,9 @@ const NotificationBell = () => {
     }
 
     const apiBase = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-    const wsHost = apiBase.replace(/^http/, "ws");
-    const wsUrl = `${wsHost}/ws/notifications/${userId}?token=${token}`;
+    // Replace http/https with ws/wss dynamically
+    const wsBase = apiBase.replace(/^http/, "ws");
+    const wsUrl = `${wsBase}/ws/notifications/${userId}?token=${token}`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 

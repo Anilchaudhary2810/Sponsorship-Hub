@@ -121,7 +121,8 @@ const Navbar = ({ role }) => {
     (async () => {
       try {
         const token = localStorage.getItem("authToken");
-        const resp = await fetch(`http://127.0.0.1:8000/users/${userId}/profile`, {
+        const apiBase = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+        const resp = await fetch(`${apiBase}/users/${userId}/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!resp.ok) return;

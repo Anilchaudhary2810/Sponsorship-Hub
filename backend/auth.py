@@ -36,20 +36,25 @@ def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ):
+    from .logger import auth_logger
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         if payload.get("type") != "access":
+            auth_logger.error("Token rejection: Invalid token type in payload")
             raise AuthenticationError("Invalid token type")
             
-        user_id: str = payload.get("sub")
-        if user_id is None:
+        user_id_val = payload.get("sub")
+        if user_id_val is None:
+            auth_logger.error("Token rejection: No 'sub' field in payload")
             raise AuthenticationError()
-    except JWTError:
+    except JWTError as e:
+        auth_logger.error(f"Token rejection: JWT decode error: {str(e)}")
         raise AuthenticationError()
 
-    user = get_user(db, int(user_id))
+    user = get_user(db, int(user_id_val))
     if user is None:
-        raise AuthenticationError("User not found")
+        auth_logger.error(f"Auth Rejection: User ID {user_id_val} not found in database. The database may have been reset.")
+        raise AuthenticationError(f"User account (ID: {user_id_val}) no longer exists. Please re-register or log in again.")
         
     return user
 

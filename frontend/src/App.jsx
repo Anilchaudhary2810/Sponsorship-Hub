@@ -10,8 +10,8 @@ import OrganizerDashboard from "./pages/OrganizerDashboard";
 import InfluencerDashboard from "./pages/InfluencerDashboard";
 import PublicProfile from "./pages/PublicProfile";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import LandingPage from "./pages/LandingPage";
 import PrivateRoute from "./components/PrivateRoute";
-import AIChatbot from "./components/AIChatbot";
 
 function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("app-theme") || "dark");
@@ -28,7 +28,7 @@ function App() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -67,7 +67,6 @@ function App() {
           )}
         />
       </Routes>
-      <AIChatbot />
     </>
   );
 }
