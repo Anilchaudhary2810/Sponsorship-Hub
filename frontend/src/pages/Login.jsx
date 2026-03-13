@@ -25,7 +25,7 @@ const Login = () => {
   // Use a second effect to check for existing login and redirect
   // This handles the "landing on /login when already authed" case
   React.useEffect(() => {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("access_token");
     const user = JSON.parse(localStorage.getItem("currentUser") || "null");
     if (token && user) {
       const role = user.role?.toLowerCase();
@@ -52,9 +52,10 @@ const Login = () => {
     try {
       console.log("Attempting login for:", formData.email);
       const resp = await loginUser(formData);
-      const { access_token, user } = resp.data;
+      const { access_token, refresh_token, user } = resp.data;
       
-      localStorage.setItem("authToken", access_token);
+      localStorage.setItem("access_token", access_token);
+      localStorage.setItem("refresh_token", refresh_token);
       localStorage.setItem("currentUser", JSON.stringify(user));
       
       toast.success(`Welcome back, ${user.full_name}!`);

@@ -7,7 +7,23 @@ import './LandingPage.css';
 const LandingPage = () => {
   const navigate = useNavigate();
 
+  const [stats, setStats] = React.useState({ sponsors: '500+', events: '1.2k+', capital: '$4M+' });
+  const [showBto, setShowBto] = React.useState(false);
+  const audioRef = React.useRef(null);
+
   React.useEffect(() => {
+    // Fetch real stats
+    fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/stats/public`)
+      .then(res => res.json())
+      .then(data => {
+        setStats({
+          sponsors: `${data.sponsors}+`,
+          events: `${data.events}+`,
+          capital: data.capital
+        });
+      })
+      .catch(() => {}); // Fallback to defaults
+
     const observerOptions = {
       threshold: 0.1
     };
@@ -46,6 +62,22 @@ const LandingPage = () => {
     }
   ];
 
+  const handleAndroidClick = () => {
+    setShowBto(true);
+    if (!audioRef.current) {
+      // Create a small beep or funny sound if possible, 
+      // but standard web policy requires user interaction which we have here.
+      audioRef.current = new Audio('https://mobcup.fm/browse/ringtones/mp3/0/downloads/time-lagega-meme'); 
+    }
+    audioRef.current.play().catch(() => {});
+    
+    toast('Opening the "Android App" experience...', { icon: '🤖' });
+    
+    setTimeout(() => {
+      setShowBto(false);
+    }, 5000);
+  };
+
   return (
     <div className="landing-container">
       <div className="landing-bg">
@@ -81,7 +113,7 @@ const LandingPage = () => {
             </button>
             <button 
               className="btn-secondary"
-              onClick={() => toast.success('Android App is in development. Stay tuned!', { icon: '📱' })}
+              onClick={handleAndroidClick}
             >
               Android App
               <span className="coming-soon-tag">Coming Soon</span>
@@ -112,15 +144,15 @@ const LandingPage = () => {
         <section id="stats" style={{ padding: '80px 5%', textAlign: 'center' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3rem', maxWidth: '1000px', margin: '0 auto' }}>
             <div>
-              <h2 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>500+</h2>
+              <h2 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{stats.sponsors}</h2>
               <p style={{ color: 'var(--text-muted)' }}>Verified Sponsors</p>
             </div>
             <div>
-              <h2 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>1.2k+</h2>
+              <h2 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{stats.events}</h2>
               <p style={{ color: 'var(--text-muted)' }}>Events Hosted</p>
             </div>
             <div>
-              <h2 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>$4M+</h2>
+              <h2 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{stats.capital}</h2>
               <p style={{ color: 'var(--text-muted)' }}>Capital Raised</p>
             </div>
           </div>
@@ -169,6 +201,24 @@ const LandingPage = () => {
           <a href="#" className="nav-link">Contact</a>
         </div>
       </footer>
+
+      {showBto && (
+        <div className="bto-overlay" onClick={() => setShowBto(false)}>
+           <div className="bto-card glass">
+              <div className="bto-avatar">🤖</div>
+              <h2>Android App pe Kaam Chal rha h!</h2>
+              <p>Thoda sa Time Lagega abhi ...</p>
+              <div className="bto-loader"></div>
+              <button 
+                className="btn-primary" 
+                style={{ marginTop: '1rem' }}
+                onClick={(e) => { e.stopPropagation(); setShowBto(false); }}
+              >
+                Theek h bhai!
+              </button>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

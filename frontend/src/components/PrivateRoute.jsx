@@ -9,7 +9,7 @@ const PrivateRoute = ({ role, children }) => {
   useEffect(() => {
     const validate = () => {
       try {
-        const token = localStorage.getItem("authToken");
+        const token = localStorage.getItem("access_token");
         const parsed = JSON.parse(
           localStorage.getItem("currentUser") || "null"
         );
@@ -38,7 +38,8 @@ const PrivateRoute = ({ role, children }) => {
           
           if (payload.exp && payload.exp < now) {
             // token is provably expired — clear storage and redirect
-            localStorage.removeItem("authToken");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("refresh_token");
             localStorage.removeItem("currentUser");
             setIsValid(false);
             setIsChecking(false);

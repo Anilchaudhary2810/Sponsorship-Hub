@@ -66,9 +66,10 @@ const Register = () => {
       
       console.log("Registering with payload:", payload);
       const resp = await registerUser(payload);
-      const { access_token, user } = resp.data;
+      const { access_token, refresh_token, user } = resp.data;
       
-      localStorage.setItem("authToken", access_token);
+      localStorage.setItem("access_token", access_token);
+      localStorage.setItem("refresh_token", refresh_token);
       localStorage.setItem("currentUser", JSON.stringify(user));
       toast.success("Registration successful! Welcome aboard 🎉");
       

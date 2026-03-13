@@ -8,9 +8,8 @@ const api = axios.create({
 
 // attach token from localStorage on each request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem("access_token");
   if (token) {
-    // Explicitly set the Authorization header for all requests
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -43,7 +42,8 @@ api.interceptors.response.use(
 
     // Auto-logout on 401 Unauthorized (expired/invalid token)
     if (error.response?.status === 401) {
-      localStorage.removeItem("authToken");
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
       localStorage.removeItem("currentUser");
       // Let the PrivateRoute or local components handle the redirect via state changes
       // to avoid hard page refreshes that can cause race conditions.

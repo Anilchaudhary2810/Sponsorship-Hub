@@ -90,7 +90,8 @@ const Navbar = ({ role }) => {
 
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
-    localStorage.removeItem("authToken");
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
     navigate("/login");
   };
 
@@ -127,7 +128,7 @@ const Navbar = ({ role }) => {
     if (!showProfilePanel || !userId) return;
     (async () => {
       try {
-        const token = localStorage.getItem("authToken");
+        const token = localStorage.getItem("access_token");
         const apiBase = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
         const resp = await fetch(`${apiBase}/users/${userId}/profile`, {
           headers: { Authorization: `Bearer ${token}` }

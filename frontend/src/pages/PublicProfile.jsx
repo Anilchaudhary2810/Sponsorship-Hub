@@ -14,12 +14,12 @@ const PublicProfile = () => {
   const [error, setError] = useState(null);
 
   const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-  const token = localStorage.getItem("authToken");
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
+        const token = localStorage.getItem("access_token");
         const resp = await fetch(`${API}/users/${userId}/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         });

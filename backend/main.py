@@ -21,7 +21,8 @@ from .routers import (
     chat_router,
     notifications_router,
     notifications_ws_router,
-    auth_router
+    auth_router,
+    stats_router
 )
 
 # ✅ Import limiter ONLY from core
@@ -148,6 +149,7 @@ app.include_router(chat_router)
 app.include_router(notifications_router)
 app.include_router(notifications_ws_router)
 app.include_router(reviews_router)
+app.include_router(stats_router)
 
 
 # -------------------------------------------------

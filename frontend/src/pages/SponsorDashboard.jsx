@@ -71,7 +71,7 @@ const SponsorDashboard = () => {
 
   const loadData = async () => {
     // Only proceed if we have a token
-    if (!localStorage.getItem("authToken")) return;
+    if (!localStorage.getItem("access_token")) return;
 
     try {
       const [eventsResp, dealsResp, influencersResp, campaignsResp] = await Promise.all([

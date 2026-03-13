@@ -31,7 +31,7 @@ const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
     // 1. Fetch history
     const fetchHistory = async () => {
       try {
-        const token = localStorage.getItem("authToken");
+        const token = localStorage.getItem("access_token");
         const response = await fetch(`${apiBase}/chat/history/${dealId}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -52,7 +52,7 @@ const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
     fetchHistory();
 
     // 2. Setup WebSocket
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("access_token");
     const socket = new WebSocket(`${wsHost}/chat/ws/${dealId}?token=${token}`);
 
     socket.onmessage = (event) => {

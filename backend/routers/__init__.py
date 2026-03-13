@@ -7,6 +7,7 @@ from .notifications import router as notifications_router, ws_router as notifica
 from .auth_router import router as auth_router
 from .payments import router as payments_router
 from .chat import router as chat_router
+from .stats import router as stats_router
 
 __all__ = [
     "users_router", 
@@ -18,5 +19,6 @@ __all__ = [
     "notifications_ws_router",
     "auth_router",
     "payments_router",
-    "chat_router"
+    "chat_router",
+    "stats_router"
 ]

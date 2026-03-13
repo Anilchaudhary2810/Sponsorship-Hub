@@ -31,7 +31,7 @@ const NotificationBell = () => {
   const connectWebSocket = useCallback(() => {
     if (!mountedRef.current) return;
 
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("access_token");
     const userId = currentUser.id;
     if (!userId || !token) return;
 
