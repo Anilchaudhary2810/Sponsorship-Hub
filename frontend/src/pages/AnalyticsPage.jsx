@@ -17,6 +17,12 @@ const AnalyticsPage = () => {
 
   useEffect(() => {
     const loadAllData = async () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
       try {
         setLoading(true);
         // We need to know the target user's role to filter correctly

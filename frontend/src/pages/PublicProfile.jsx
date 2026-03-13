@@ -5,6 +5,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip
 } from "recharts";
 import "./PublicProfile.css";
+import { fetchUserProfile } from "../services/api";
 
 const PublicProfile = () => {
   const { userId } = useParams();
@@ -17,17 +18,20 @@ const PublicProfile = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
+      // Explicit token check
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setError("Please login to view profiles");
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        const token = localStorage.getItem("access_token");
-        const resp = await fetch(`${API}/users/${userId}/profile`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!resp.ok) throw new Error("Profile not found");
-        const data = await resp.json();
-        setProfile(data);
+        const resp = await fetchUserProfile(userId);
+        setProfile(resp.data);
       } catch (e) {
-        setError(e.message);
+        setError(e.response?.data?.message || "Profile not found");
       } finally {
         setLoading(false);
       }

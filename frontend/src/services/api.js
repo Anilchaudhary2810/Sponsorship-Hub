@@ -1,65 +1,4 @@
-import axios from "axios";
-import toast from "react-hot-toast";
-
-// create axios instance with base URL and interceptors
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:8000",
-});
-
-// attach token from localStorage on each request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// global error handler
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Backend custom error shape: { error, message, code }
-    // FastAPI default shape:      { detail: string | list }
-    let message =
-      error.response?.data?.message ||   // custom backend shape (primary)
-      error.response?.data?.detail ||    // FastAPI default shape
-      error.message;                     // network/axios error
-
-    // Handle FastAPI 422 validation errors — detail is a list of objects
-    if (typeof message === "object" && message !== null) {
-      if (Array.isArray(message)) {
-        const err = message[0];
-        const field = err?.loc ? err.loc[err.loc.length - 1] : "Unknown field";
-        message = `Error in '${field}': ${err?.msg || "Invalid value"}`;
-      } else {
-        message = JSON.stringify(message);
-      }
-    }
-
-    if (message) toast.error(message);
-
-    // Auto-logout on 401 Unauthorized (expired/invalid token)
-    if (error.response?.status === 401) {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      localStorage.removeItem("currentUser");
-      // Let the PrivateRoute or local components handle the redirect via state changes
-      // to avoid hard page refreshes that can cause race conditions.
-      // Custom backend shape: { error, message, code }
-      const errorMessage = error.response?.data?.message || error.response?.data?.detail;
-      
-      if (errorMessage) {
-        toast.error(`Authentication failed: ${errorMessage}`);
-      } else {
-        toast.error("Authentication failed. Please log in again.");
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
+import api from "../api/api";
 
 // --- auth & user endpoints ---
 export const registerUser = (payload) => api.post("/auth/register", payload);
@@ -70,6 +9,7 @@ export const forgotPassword = (data) => api.post("/auth/request-password-reset",
 export const resetPassword = (data) => api.post("/auth/reset-password", data);
 export const fetchUserProfile = (id) => api.get(`/users/${id}/profile`);
 export const getUsersByRole = (role) => api.get(`/users/?role=${role}`);
+export const fetchPublicStats = () => api.get("/stats/public");
 
 // --- events ---
 export const fetchEvents = () => api.get("/events/");
@@ -97,6 +37,7 @@ export const createReview = (data) => api.post("/reviews/", data);
 export const fetchReviews = () => api.get("/reviews/");
 export const fetchReviewsForDeal = (dealId) => api.get(`/reviews/${dealId}`);
 export const fetchMyReviews = () => api.get("/reviews/my"); // { "dealId": rating }
+export const fetchChatHistory = (dealId) => api.get(`/chat/history/${dealId}`);
 
 // --- notifications ---
 export const fetchNotifications = () => api.get("/notifications/");

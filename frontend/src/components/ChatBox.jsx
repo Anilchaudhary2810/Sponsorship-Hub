@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { fetchChatHistory } from "../services/api";
 import "./ChatBox.css";
 
 const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
@@ -30,12 +31,13 @@ const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
 
     // 1. Fetch history
     const fetchHistory = async () => {
+      // Explicit token check
+      const token = localStorage.getItem("access_token");
+      if (!token) return;
+
       try {
-        const token = localStorage.getItem("access_token");
-        const response = await fetch(`${apiBase}/chat/history/${dealId}`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        const data = await response.json();
+        const resp = await fetchChatHistory(dealId);
+        const data = resp.data;
         setMessages(data.map(m => ({
           sender_id: m.sender_id,
           sender_role: m.sender_role,
@@ -53,6 +55,7 @@ const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
 
     // 2. Setup WebSocket
     const token = localStorage.getItem("access_token");
+    if (!token) return;
     const socket = new WebSocket(`${wsHost}/chat/ws/${dealId}?token=${token}`);
 
     socket.onmessage = (event) => {

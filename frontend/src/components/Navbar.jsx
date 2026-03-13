@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Navbar.css";
-import { fetchMyReviews, updateUser } from "../services/api";
+import { fetchMyReviews, updateUser, fetchUserProfile } from "../services/api";
 import NotificationBell from "./NotificationBell";
 import { INDIAN_STATES } from "../utils/constants";
 
@@ -126,16 +126,15 @@ const Navbar = ({ role }) => {
   // ── Load reviews RECEIVED by this user (via public profile API) ────────────
   useEffect(() => {
     if (!showProfilePanel || !userId) return;
+    
+    // Explicit token check as per requirements
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
     (async () => {
       try {
-        const token = localStorage.getItem("access_token");
-        const apiBase = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-        const resp = await fetch(`${apiBase}/users/${userId}/profile`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!resp.ok) return;
-        const data = await resp.json();
-        setMyReviews(data.reviews || []);
+        const resp = await fetchUserProfile(userId);
+        setMyReviews(resp.data.reviews || []);
       } catch {}
     })();
   }, [showProfilePanel, userId]);

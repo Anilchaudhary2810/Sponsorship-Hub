@@ -2,6 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { fetchPublicStats } from '../services/api';
 import './LandingPage.css';
 
 const LandingPage = () => {
@@ -13,9 +14,9 @@ const LandingPage = () => {
 
   React.useEffect(() => {
     // Fetch real stats
-    fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/stats/public`)
-      .then(res => res.json())
-      .then(data => {
+    fetchPublicStats()
+      .then(resp => {
+        const data = resp.data;
         setStats({
           sponsors: `${data.sponsors}+`,
           events: `${data.events}+`,

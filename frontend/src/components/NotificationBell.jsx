@@ -17,6 +17,9 @@ const NotificationBell = () => {
   const [currentUser] = useState(() => JSON.parse(localStorage.getItem("currentUser") || "{}"));
 
   const loadNotifications = useCallback(async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
     try {
       const response = await fetchNotifications();
       if (!mountedRef.current) return;
