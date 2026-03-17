@@ -29,6 +29,11 @@ api.interceptors.response.use(
       } else {
         toast.error("Session expired. Please log in again.");
       }
+      
+      // Force redirect to login
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

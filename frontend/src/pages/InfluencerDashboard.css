@@ -529,4 +529,30 @@
 @media (max-width: 480px) {
   .influencer-title { font-size: 28px; }
   .dashboard-section-wide { padding: 20px; }
+  
+  /* Consolidated Horizontal Scroll for all sections except Analytics */
+  .campaign-horizontal-grid,
+  .deal-pipeline-grid {
+    display: flex;
+    overflow-x: auto;
+    padding: 10px 4px 25px;
+    gap: 16px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin-left: -5px;
+    margin-right: -5px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .campaign-horizontal-grid::-webkit-scrollbar,
+  .deal-pipeline-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .campaign-card-modern,
+  .deal-pipeline-grid > * {
+    min-width: 300px;
+    scroll-snap-align: center;
+    flex: 0 0 auto;
+  }
 }

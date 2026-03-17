@@ -69,13 +69,16 @@ const InfluencerDashboard = () => {
   useEffect(() => {
     loadData();
 
-    // Poll for deal updates every 30 s as a lightweight fallback.
-    // Real-time updates are handled by the NotificationBell WebSocket (in Navbar).
-    const pollInterval = setInterval(() => {
-      refreshDeals();
-    }, 30000);
+    // Global listener for real-time refreshes (triggered by WebSockets)
+    const handleGlobalRefresh = () => {
+      console.log("Real-time refresh triggered");
+      loadData();
+    };
+    window.addEventListener('dashboard-refresh', handleGlobalRefresh);
 
-    return () => clearInterval(pollInterval);
+    return () => {
+      window.removeEventListener('dashboard-refresh', handleGlobalRefresh);
+    };
   }, [currentUser.id]);
 
   const handleApply = async (campaign) => {
