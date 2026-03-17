@@ -12,7 +12,7 @@ export const getUsersByRole = (role) => api.get(`/users/?role=${role}`);
 export const fetchPublicStats = () => api.get("/stats/public");
 
 // --- events ---
-export const fetchEvents = () => api.get("/events/");
+export const fetchEvents = (params = {}) => api.get("/events/", { params });
 export const createEvent = (data) => api.post("/events/", data);
 export const updateEvent = (id, data) => api.put(`/events/${id}`, data);
 export const deleteEvent = (id) => api.delete(`/events/${id}`);
@@ -28,7 +28,7 @@ export const markPaymentDone = (id, payment) => api.put(`/deals/${id}/payment`, 
 export const signDeal = (id, sign) => api.put(`/deals/${id}/sign`, sign);
 
 // --- campaigns ---
-export const fetchCampaigns = () => api.get("/campaigns/");
+export const fetchCampaigns = (params = {}) => api.get("/campaigns/", { params });
 export const createCampaign = (data) => api.post("/campaigns/", data);
 export const updateCampaign = (id, data) => api.put(`/campaigns/${id}`, data);
 

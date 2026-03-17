@@ -62,9 +62,11 @@ const OrganizerDashboard = () => {
 
   const loadData = async () => {
     try {
+      const eventParams = selectedState !== "All States" ? { state: selectedState } : {};
+      
       const [sponsorsResp, eventsResp, dealsResp] = await Promise.all([
         getAvailableSponsors(),
-        fetchEvents(),
+        fetchEvents(eventParams),
         fetchDeals()
       ]);
       
@@ -112,14 +114,17 @@ const OrganizerDashboard = () => {
   useEffect(() => {
     loadData();
 
-    // Poll for deal updates every 30 s as a lightweight fallback.
-    // Real-time updates are handled by the NotificationBell WebSocket (in Navbar).
-    const pollInterval = setInterval(() => {
-      refreshDeals();
-    }, 30000);
+    // Global listener for real-time refreshes (triggered by WebSockets)
+    const handleGlobalRefresh = () => {
+      console.log("Real-time refresh triggered");
+      loadData();
+    };
+    window.addEventListener('dashboard-refresh', handleGlobalRefresh);
 
-    return () => clearInterval(pollInterval);
-  }, [currentUser.id]);
+    return () => {
+      window.removeEventListener('dashboard-refresh', handleGlobalRefresh);
+    };
+  }, [currentUser.id, selectedState]); // Added selectedState as dependency
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 

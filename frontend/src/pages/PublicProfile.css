@@ -8,9 +8,9 @@
 }
 
 .profile-back-btn {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #94a3b8;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
   padding: 10px 20px;
   border-radius: 10px;
   cursor: pointer;
@@ -21,9 +21,9 @@
   display: inline-block;
 }
 .profile-back-btn:hover {
-  background: rgba(99,102,241,0.15);
-  color: #f8fafc;
-  border-color: rgba(99,102,241,0.3);
+  background: var(--ring);
+  color: var(--foreground);
+  border-color: var(--primary);
 }
 
 /* Glass Card Utility */
@@ -93,7 +93,7 @@
   font-size: 12px;
   color: white;
   font-weight: 700;
-  border: 2px solid #080f1e;
+  border: 2px solid var(--background);
 }
 
 .profile-hero-info {
@@ -121,9 +121,9 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  color: #818cf8;
+  background: var(--ring);
+  border: 1px solid var(--primary);
+  color: var(--primary);
   border-radius: 12px;
   font-weight: 700;
   font-size: 13px;
@@ -132,7 +132,7 @@
 }
 
 .analytics-nav-btn:hover {
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: var(--primary-gradient);
   color: white;
   border-color: transparent;
   transform: translateY(-2px);
@@ -236,9 +236,9 @@
 }
 
 .profile-tag {
-  background: rgba(99,102,241,0.15);
-  border: 1px solid rgba(99,102,241,0.3);
-  color: #818cf8;
+  background: var(--ring);
+  border: 1px solid var(--primary);
+  color: var(--primary);
   padding: 4px 14px;
   border-radius: 20px;
   font-size: 13px;
@@ -252,8 +252,8 @@
   border-radius: 12px;
   padding: 16px;
 }
-.audience-number { font-size: 32px; font-weight: 800; color: #f59e0b; display: block; }
-.audience-label { font-size: 12px; color: #92400e; }
+.audience-number { font-size: 32px; font-weight: 800; color: var(--accent); display: block; }
+.audience-label { font-size: 12px; color: var(--muted-foreground); }
 
 .social-links {
   display: flex;
@@ -305,9 +305,9 @@
 }
 
 .reviews-count-badge {
-  background: rgba(99,102,241,0.15);
-  border: 1px solid rgba(99,102,241,0.3);
-  color: #818cf8;
+  background: var(--ring);
+  border: 1px solid var(--primary);
+  color: var(--primary);
   padding: 4px 14px;
   border-radius: 20px;
   font-size: 13px;
@@ -360,7 +360,7 @@
   margin-left: auto;
   font-size: 16px;
 }
-.mini-star { color: #1e293b; }
+.mini-star { color: var(--border); }
 .mini-star.filled { color: #fbbf24; }
 
 .review-comment {

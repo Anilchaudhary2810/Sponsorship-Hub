@@ -74,8 +74,11 @@ const SponsorDashboard = () => {
     if (!localStorage.getItem("access_token")) return;
 
     try {
+      // Pass the selected state filter to the API for better efficiency
+      const eventParams = selectedState !== "All States" ? { state: selectedState } : {};
+      
       const [eventsResp, dealsResp, influencersResp, campaignsResp] = await Promise.all([
-        fetchEvents(), 
+        fetchEvents(eventParams), 
         fetchDeals(),
         getAvailableInfluencers(),
         fetchCampaigns()
@@ -119,8 +122,18 @@ const SponsorDashboard = () => {
       loadData();
     }, 300);
 
-    return () => clearTimeout(timer);
-  }, [currentUser.id]);
+    // Global listener for real-time refreshes (triggered by WebSockets)
+    const handleGlobalRefresh = () => {
+      console.log("Real-time refresh triggered");
+      loadData();
+    };
+    window.addEventListener('dashboard-refresh', handleGlobalRefresh);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('dashboard-refresh', handleGlobalRefresh);
+    };
+  }, [currentUser.id, selectedState]); // Added selectedState as dependency
 
   const refreshDeals = async () => {
     const resp = await fetchDeals();
@@ -255,7 +268,6 @@ const SponsorDashboard = () => {
 
   const filteredEvents = events.filter(e => {
     if (hiddenEventIds.includes(e.id)) return false;
-    const matchesState = selectedState === "All States" || e.state === selectedState;
     const matchesSearch = 
       e.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
       e.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -265,7 +277,7 @@ const SponsorDashboard = () => {
     const matchesCategory = filterCategory === "All Categories" || e.category === filterCategory;
     const matchesCity = filterCity === "All Cities" || e.city === filterCity;
     const matchesBudget = (!minBudget || e.budget >= Number(minBudget)) && (!maxBudget || e.budget <= Number(maxBudget));
-    return matchesState && matchesSearch && matchesCategory && matchesCity && matchesBudget;
+    return matchesSearch && matchesCategory && matchesCity && matchesBudget;
   });
 
   const filteredInfluencers = influencers.filter(i => {

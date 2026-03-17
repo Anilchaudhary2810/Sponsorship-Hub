@@ -342,6 +342,35 @@
   .dashboard-section-wide { padding: 20px; }
   .deal-actions-row, .marketplace-actions-row { flex-direction: column; }
   .accept-pill-btn, .reject-pill-btn, .mini-action-btn { width: 100%; }
+  
+  /* Consolidated Horizontal Scroll for all sections except Analytics */
+  .event-horizontal-grid, 
+  .creator-horizontal-grid,
+  .deal-pipeline-grid {
+    display: flex;
+    overflow-x: auto;
+    padding: 10px 4px 25px;
+    gap: 16px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin-left: -5px;
+    margin-right: -5px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .event-horizontal-grid::-webkit-scrollbar, 
+  .creator-horizontal-grid::-webkit-scrollbar,
+  .deal-pipeline-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .event-card-modern, 
+  .creator-card-modern,
+  .deal-pipeline-grid > * {
+    min-width: 280px;
+    scroll-snap-align: center;
+    flex: 0 0 auto;
+  }
 }
 
 .delete-confirm-btn.proposal-btn {

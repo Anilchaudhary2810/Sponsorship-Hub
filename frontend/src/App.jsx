@@ -21,6 +21,26 @@ function App() {
     localStorage.setItem("app-theme", theme);
   }, [theme]);
 
+  // Master Auth Verification - Ensures the local user still exists on the server
+  useEffect(() => {
+    const verifyAuth = async () => {
+      const token = localStorage.getItem("access_token");
+      const user = JSON.parse(localStorage.getItem("currentUser") || "null");
+      
+      if (token && user) {
+        try {
+          // Attempt to fetch current user to verify session/account existence
+          const { fetchUser } = await import("./services/api");
+          await fetchUser(user.id);
+        } catch (err) {
+          // If fetch fails (401 or 404), api.js interceptor will handle cleanup/redirect
+          console.error("Auth verification failed:", err);
+        }
+      }
+    };
+    verifyAuth();
+  }, []);
+
   const toggleTheme = () => {
     if (!document.startViewTransition) {
       setTheme(prev => prev === 'dark' ? 'light' : 'dark');

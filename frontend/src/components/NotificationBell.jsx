@@ -70,9 +70,12 @@ const NotificationBell = () => {
         if (notif.title && notif.message) {
           setNotifications(prev => [notif, ...prev]);
           setUnreadCount(c => c + 1);
+          // Auto-trigger dashboard refresh for any push notification
+          window.dispatchEvent(new CustomEvent('dashboard-refresh'));
         } else if (notif.type === "DEAL_UPDATE" || notif.type === "MARKETPLACE_REFRESH") {
           // Just refresh the list for generic deal-update pings
           loadNotifications();
+          window.dispatchEvent(new CustomEvent('dashboard-refresh'));
         }
       } catch { /* ignore malformed frames */ }
     };

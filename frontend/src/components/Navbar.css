@@ -406,8 +406,13 @@
   }
   
   .profile-popover {
-    width: 280px;
-    right: -20px;
+    position: fixed;
+    top: 80px;
+    left: 20px;
+    right: 20px;
+    width: auto;
+    max-height: 80vh;
+    overflow-y: auto;
   }
 }
 
