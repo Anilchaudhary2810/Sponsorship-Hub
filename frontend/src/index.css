@@ -80,6 +80,7 @@
   --muted-foreground: hsl(var(--text-muted));
   --border: hsl(var(--border-main));
   --input: hsl(var(--bg-input));
+  --ring: hsla(var(--color-primary), 0.15);
   --primary: hsl(var(--color-primary));
   --primary-foreground: hsl(var(--text-inverse));
   --primary-gradient: var(--brand-gradient);
