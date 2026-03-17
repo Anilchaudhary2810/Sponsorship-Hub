@@ -163,7 +163,7 @@ const Register = () => {
             </div>
           </div>
 
-          <button type="submit" className="register-button">Register as {role || 'User'}</button>
+          <button type="submit" className="register-button">Register as {role.charAt(0).toUpperCase() + role.slice(1)}</button>
           <p className="register-link">
             Already have an account? <span onClick={() => navigate("/login")}>Login</span>
           </p>

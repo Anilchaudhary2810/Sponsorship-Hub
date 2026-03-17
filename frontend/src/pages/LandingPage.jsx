@@ -10,6 +10,7 @@ const LandingPage = () => {
 
   const [stats, setStats] = React.useState({ sponsors: '500+', events: '1.2k+', capital: '$4M+' });
   const [showBto, setShowBto] = React.useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const audioRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -88,6 +89,8 @@ const LandingPage = () => {
 
       <nav className="landing-nav glass">
         <div className="nav-brand">SPONSORHUB</div>
+        
+        {/* Desktop Links */}
         <div className="nav-links">
           <a href="#features" className="nav-link">Features</a>
           <a href="#about" className="nav-link">About</a>
@@ -95,6 +98,22 @@ const LandingPage = () => {
             Login
           </button>
         </div>
+
+        {/* Mobile Toggle */}
+        <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? '✕' : '☰'}
+        </button>
+
+        {/* Mobile Sidebar */}
+        {mobileMenuOpen && (
+          <div className="mobile-sidebar glass fade-in">
+            <a href="#features" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Features</a>
+            <a href="#about" className="nav-link" onClick={() => setMobileMenuOpen(false)}>About</a>
+            <button onClick={() => navigate('/login')} className="btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
+              Login
+            </button>
+          </div>
+        )}
       </nav>
 
       <main>
@@ -142,19 +161,22 @@ const LandingPage = () => {
           ))}
         </section>
 
+        <section id="about" style={{ display: 'none' }}></section>
+
+
         <section id="stats" style={{ padding: '80px 5%', textAlign: 'center' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3rem', maxWidth: '1000px', margin: '0 auto' }}>
-            <div>
-              <h2 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{stats.sponsors}</h2>
-              <p style={{ color: 'var(--text-muted)' }}>Verified Sponsors</p>
+          <div className="landing-stats-grid">
+            <div className="stat-item">
+              <h2 className="stat-value">{stats.sponsors}</h2>
+              <p className="stat-label">Verified Sponsors</p>
             </div>
-            <div>
-              <h2 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{stats.events}</h2>
-              <p style={{ color: 'var(--text-muted)' }}>Events Hosted</p>
+            <div className="stat-item">
+              <h2 className="stat-value">{stats.events}</h2>
+              <p className="stat-label">Events Hosted</p>
             </div>
-            <div>
-              <h2 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{stats.capital}</h2>
-              <p style={{ color: 'var(--text-muted)' }}>Capital Raised</p>
+            <div className="stat-item">
+              <h2 className="stat-value">{stats.capital}</h2>
+              <p className="stat-label">Capital Raised</p>
             </div>
           </div>
         </section>
@@ -197,9 +219,9 @@ const LandingPage = () => {
           &copy; {new Date().getFullYear()} Sponsor Hub Inc. All rights reserved.
         </p>
         <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
-          <a href="#" className="nav-link">Privacy Policy</a>
-          <a href="#" className="nav-link">Terms of Service</a>
-          <a href="#" className="nav-link">Contact</a>
+          <button className="nav-link-btn" onClick={() => toast.success("Policy details coming soon!")}>Privacy Policy</button>
+          <button className="nav-link-btn" onClick={() => toast.success("Terms coming soon!")}>Terms of Service</button>
+          <button className="nav-link-btn" onClick={() => toast.success("Contact: support@sponsorhub.com")}>Contact</button>
         </div>
       </footer>
 
