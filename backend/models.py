@@ -39,6 +39,9 @@ class User(Base):
     reset_password_token = Column(String(255), nullable=True)
     reset_password_expires_at = Column(DateTime, nullable=True)
     refresh_token = Column(String(255), nullable=True, index=True)
+    plan_tier = Column(String(30), default="free", nullable=False, index=True)
+    plan_status = Column(String(20), default="active", nullable=False, index=True)
+    plan_renewal_at = Column(DateTime, nullable=True)
 
     # Sponsor/Organizer fields
     company_name = Column(String(200))
@@ -219,6 +222,38 @@ class Notification(Base):
     message = Column(Text, nullable=False)
     type = Column(String(50), nullable=False) # e.g., "deal_new", "payment", "sign", "review"
     is_read = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+
+    user = relationship("User")
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    action = Column(String(80), nullable=False, index=True)
+    actor_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    target_type = Column(String(80), nullable=True, index=True)
+    target_id = Column(Integer, nullable=True, index=True)
+    ip_address = Column(String(64), nullable=True)
+    user_agent = Column(String(300), nullable=True)
+    event_meta = Column(JSON, default=dict)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+
+    actor = relationship("User")
+
+
+class BillingEvent(Base):
+    __tablename__ = "billing_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    from_plan = Column(String(30), nullable=True)
+    to_plan = Column(String(30), nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False, default=0)
+    currency = Column(String(10), nullable=False, default="INR")
+    status = Column(String(30), nullable=False, default="simulated")
+    note = Column(String(255), nullable=True)
     created_at = Column(DateTime, server_default=func.now(), index=True)
 
     user = relationship("User")

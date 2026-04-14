@@ -5,7 +5,7 @@ import uuid
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from .database import engine
 from . import models, exceptions
@@ -22,11 +22,15 @@ from .routers import (
     notifications_router,
     notifications_ws_router,
     auth_router,
-    stats_router
+    stats_router,
+    ops_router,
+    billing_router,
 )
 
 # ✅ Import limiter ONLY from core
 from backend.core.limiter import limiter
+from backend.core.realtime import realtime_bus
+from backend.core.metrics import record_request
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -55,11 +59,22 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # -------------------------------------------------
 
 def run_startup_migrations():
-    """Manual migration for vendor change if DB already exists"""
+    """Small startup migrations for backward-compatible schema updates."""
     try:
         from sqlalchemy import text, inspect
         # Use inspector to be database-agnostic
         inspector = inspect(engine)
+        if "users" in inspector.get_table_names():
+            user_columns = {c["name"] for c in inspector.get_columns("users")}
+            with engine.begin() as conn:
+                if "plan_tier" not in user_columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN plan_tier VARCHAR(30)"))
+                    conn.execute(text("UPDATE users SET plan_tier = 'free' WHERE plan_tier IS NULL"))
+                if "plan_status" not in user_columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN plan_status VARCHAR(20)"))
+                    conn.execute(text("UPDATE users SET plan_status = 'active' WHERE plan_status IS NULL"))
+                if "plan_renewal_at" not in user_columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN plan_renewal_at TIMESTAMP"))
         if 'deals' in inspector.get_table_names():
             columns = [c['name'] for c in inspector.get_columns('deals')]
             if 'stripe_payment_intent_id' in columns and 'razorpay_payment_id' not in columns:
@@ -150,6 +165,18 @@ app.include_router(notifications_router)
 app.include_router(notifications_ws_router)
 app.include_router(reviews_router)
 app.include_router(stats_router)
+app.include_router(ops_router)
+app.include_router(billing_router)
+
+
+@app.on_event("startup")
+async def startup_realtime_bus():
+    await realtime_bus.start()
+
+
+@app.on_event("shutdown")
+async def shutdown_realtime_bus():
+    await realtime_bus.stop()
 
 
 # -------------------------------------------------
@@ -160,6 +187,39 @@ app.include_router(stats_router)
 @limiter.limit("10/minute")
 def health_check(request: Request):
     return {"status": "healthy", "timestamp": time.time()}
+
+
+@app.get("/health/ready")
+@limiter.limit("30/minute")
+async def readiness_check(request: Request):
+    db_ok = False
+    redis_ok = False
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            db_ok = True
+    except Exception:
+        db_ok = False
+
+    if not realtime_bus.enabled:
+        redis_ok = True
+    else:
+        try:
+            if realtime_bus.redis is not None:
+                redis_ok = bool(await realtime_bus.redis.ping())
+            else:
+                redis_ok = False
+        except Exception:
+            redis_ok = False
+
+    if not db_ok or not redis_ok:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "degraded", "db": db_ok, "redis": redis_ok},
+        )
+
+    return {"status": "ready", "db": db_ok, "redis": redis_ok}
 
 
 # -------------------------------------------------
@@ -175,10 +235,24 @@ async def add_process_time_and_request_id(request: Request, call_next):
     request_id = str(uuid.uuid4())
     request.state.request_id = request_id
     start_time = time.time()
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > settings.MAX_REQUEST_BODY_BYTES:
+                return JSONResponse(
+                    status_code=413,
+                    content={"error": "PayloadTooLarge", "message": "Request body is too large"},
+                )
+        except ValueError:
+            pass
 
     response = await call_next(request)
 
     process_time = time.time() - start_time
+    process_ms = process_time * 1000.0
+
+    record_request(request.url.path, response.status_code, process_ms)
+
     response.headers["X-Process-Time"] = str(process_time)
     response.headers["X-Request-ID"] = request_id
     return response
@@ -191,6 +265,9 @@ async def set_secure_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'none'; base-uri 'self'"
     return response
 
 

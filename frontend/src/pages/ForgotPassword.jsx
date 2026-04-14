@@ -11,6 +11,13 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     setIsLoading(true);
     try {
       await forgotPassword({ email });
@@ -18,6 +25,11 @@ const ForgotPassword = () => {
       setTimeout(() => navigate("/login"), 3000);
     } catch (err) {
       console.error(err);
+      if (err.response) {
+        toast.error(err.response.data?.detail || "Could not process request");
+      } else {
+        toast.error("Network error. Please try again later.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -27,12 +39,12 @@ const ForgotPassword = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <div className="login-logo">SS</div>
+          <div className="login-logo">SH</div>
           <h2 className="login-title">Reset Password</h2>
           <p className="login-subtitle">We'll send you a recovery link</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleSubmit} className="login-form" noValidate>
           <div className="input-group">
             <label>Registered Email</label>
             <input

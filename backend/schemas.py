@@ -93,6 +93,9 @@ class UserResponse(UserBase):
     is_verified: bool
     verification_badge: bool
     trust_score: Decimal
+    plan_tier: str
+    plan_status: str
+    plan_renewal_at: Optional[datetime.datetime] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -122,7 +125,7 @@ class TokenResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class TokenRefreshRequest(BaseModel):
-    refresh_token: str
+    refresh_token: Optional[str] = None
 
 class PasswordResetRequest(BaseModel):
     email: EmailStr
@@ -334,6 +337,49 @@ class NotificationResponse(NotificationBase):
     id: int
     user_id: int
     is_read: bool
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BillingPlanResponse(BaseModel):
+    code: str
+    name: str
+    monthly_price_inr: int
+    limits: dict[str, int]
+    features: list[str]
+
+
+class BillingUsageResponse(BaseModel):
+    month_start: str
+    events_created: int
+    campaigns_created: int
+    deals_created: int
+    chat_messages_sent: int
+    notifications_received: int
+
+
+class BillingOverviewResponse(BaseModel):
+    plan_tier: str
+    plan_status: str
+    plan_renewal_at: Optional[datetime.datetime] = None
+    limits: dict[str, int]
+    usage: BillingUsageResponse
+
+
+class ChangePlanRequest(BaseModel):
+    target_plan: Literal["free", "starter", "growth", "enterprise"]
+    note: Optional[str] = None
+
+
+class BillingEventResponse(BaseModel):
+    id: int
+    from_plan: Optional[str] = None
+    to_plan: str
+    amount: Decimal
+    currency: str
+    status: str
+    note: Optional[str] = None
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)

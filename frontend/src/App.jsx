@@ -1,17 +1,33 @@
-import { useState, useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import Register from "./pages/Register";
-import Login from "./pages/Login";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import SplashScreen from "./pages/SplashScreen";
-import SponsorDashboard from "./pages/SponsorDashboard";
-import OrganizerDashboard from "./pages/OrganizerDashboard";
-import InfluencerDashboard from "./pages/InfluencerDashboard";
-import PublicProfile from "./pages/PublicProfile";
-import AnalyticsPage from "./pages/AnalyticsPage";
-import LandingPage from "./pages/LandingPage";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { Routes, Route } from "react-router-dom";
 import PrivateRoute from "./components/PrivateRoute";
+
+const Register = lazy(() => import("./pages/Register"));
+const Login = lazy(() => import("./pages/Login"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const SponsorDashboard = lazy(() => import("./pages/SponsorDashboard"));
+const OrganizerDashboard = lazy(() => import("./pages/OrganizerDashboard"));
+const InfluencerDashboard = lazy(() => import("./pages/InfluencerDashboard"));
+const PublicProfile = lazy(() => import("./pages/PublicProfile"));
+const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+
+const PageLoader = () => (
+  <div
+    style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "var(--muted)",
+      fontSize: "0.95rem",
+      letterSpacing: "0.02em",
+    }}
+  >
+    Loading...
+  </div>
+);
 
 function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("app-theme") || "dark");
@@ -24,10 +40,9 @@ function App() {
   // Master Auth Verification - Ensures the local user still exists on the server
   useEffect(() => {
     const verifyAuth = async () => {
-      const token = localStorage.getItem("access_token");
       const user = JSON.parse(localStorage.getItem("currentUser") || "null");
       
-      if (token && user) {
+      if (user?.id) {
         try {
           // Attempt to fetch current user to verify session/account existence
           const { fetchUser } = await import("./services/api");
@@ -53,7 +68,7 @@ function App() {
   };
 
   return (
-    <>
+    <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -94,9 +109,8 @@ function App() {
           )}
         />
       </Routes>
-    </>
+    </Suspense>
   );
 }
 
 export default App;
-

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchChatHistory } from "../services/api";
+import { getAccessToken } from "../api/api";
 import "./ChatBox.css";
 
 const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
@@ -26,15 +27,11 @@ const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
   useEffect(() => {
     if (!dealId) return;
 
-    const apiBase = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
     const wsHost = apiBase.replace(/^http/, "ws");
 
     // 1. Fetch history
     const fetchHistory = async () => {
-      // Explicit token check
-      const token = localStorage.getItem("access_token");
-      if (!token) return;
-
       try {
         const resp = await fetchChatHistory(dealId);
         const data = resp.data;
@@ -54,9 +51,14 @@ const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
     fetchHistory();
 
     // 2. Setup WebSocket
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
-    const socket = new WebSocket(`${wsHost}/chat/ws/${dealId}?token=${token}`);
+    const socket = new WebSocket(`${wsHost}/chat/ws/${dealId}`);
+
+    socket.onopen = () => {
+      const token = getAccessToken();
+      if (token) {
+        socket.send(JSON.stringify({ type: "auth", token }));
+      }
+    };
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);

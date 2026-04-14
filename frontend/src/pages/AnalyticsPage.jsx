@@ -17,8 +17,7 @@ const AnalyticsPage = () => {
 
   useEffect(() => {
     const loadAllData = async () => {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
+      if (!currentUser?.id) {
         navigate("/login");
         return;
       }

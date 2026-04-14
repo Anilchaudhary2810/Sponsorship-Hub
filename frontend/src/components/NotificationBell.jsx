@@ -4,6 +4,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead
 } from '../services/api';
+import { getAccessToken } from '../api/api';
 import './NotificationBell.css';
 
 const NotificationBell = () => {
@@ -17,8 +18,7 @@ const NotificationBell = () => {
   const [currentUser] = useState(() => JSON.parse(localStorage.getItem("currentUser") || "{}"));
 
   const loadNotifications = useCallback(async () => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
+    if (!currentUser?.id) return;
 
     try {
       const response = await fetchNotifications();
@@ -34,9 +34,8 @@ const NotificationBell = () => {
   const connectWebSocket = useCallback(() => {
     if (!mountedRef.current) return;
 
-    const token = localStorage.getItem("access_token");
     const userId = currentUser.id;
-    if (!userId || !token) return;
+    if (!userId) return;
 
     // Don't open a second socket if one is already open/connecting
     if (
@@ -47,14 +46,18 @@ const NotificationBell = () => {
       return;
     }
 
-    const apiBase = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
     // Replace http/https with ws/wss dynamically
     const wsBase = apiBase.replace(/^http/, "ws");
-    const wsUrl = `${wsBase}/ws/notifications/${userId}?token=${token}`;
+    const wsUrl = `${wsBase}/ws/notifications/${userId}`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
     socket.onopen = () => {
+      const token = getAccessToken();
+      if (token) {
+        socket.send(JSON.stringify({ type: "auth", token }));
+      }
       // Clear any pending reconnect when connection succeeds
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);

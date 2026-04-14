@@ -8,6 +8,8 @@ from .auth_router import router as auth_router
 from .payments import router as payments_router
 from .chat import router as chat_router
 from .stats import router as stats_router
+from .ops import router as ops_router
+from .billing import router as billing_router
 
 __all__ = [
     "users_router", 
@@ -20,5 +22,7 @@ __all__ = [
     "auth_router",
     "payments_router",
     "chat_router",
-    "stats_router"
+    "stats_router",
+    "ops_router",
+    "billing_router",
 ]

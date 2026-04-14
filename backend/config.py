@@ -1,7 +1,7 @@
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional, List, Union
-import os
+from typing import Optional, List
+import json
 
 class Settings(BaseSettings):
     # Base Config
@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = "sqlite:///./sponsorship.db"
+    REDIS_URL: Optional[str] = None
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 40
+    DB_POOL_RECYCLE_SECONDS: int = 1800
+    MAX_REQUEST_BODY_BYTES: int = 2_000_000
     
     # Razorpay
     RAZORPAY_KEY_ID: Optional[str] = None
@@ -39,9 +44,27 @@ class Settings(BaseSettings):
     def assemble_cors_origins(cls, v: str | List[str]) -> List[str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
+        if isinstance(v, str):
+            parsed = json.loads(v)
+            if isinstance(parsed, list) and all(isinstance(item, str) for item in parsed):
+                return parsed
+            raise ValueError("CORS_ORIGINS JSON value must be a list of strings")
+        if isinstance(v, list):
             return v
         raise ValueError(v)
+
+    @model_validator(mode="after")
+    def validate_security_settings(self):
+        env_value = (self.ENV or "").lower()
+        is_production = env_value in {"production", "prod"}
+
+        if is_production and self.SECRET_KEY == "placeholder_change_in_production":
+            raise ValueError("SECRET_KEY must be set to a strong value in production.")
+
+        if is_production and not self.RAZORPAY_WEBHOOK_SECRET:
+            raise ValueError("RAZORPAY_WEBHOOK_SECRET must be configured in production.")
+
+        return self
     
     model_config = SettingsConfigDict(
         env_file=(".env", "backend/.env", "../.env"),

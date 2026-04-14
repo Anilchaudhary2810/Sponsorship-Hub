@@ -1,13 +1,9 @@
 """
-Campaign route tests – covers CRUD for /campaigns.
-Note: campaigns router has no auth guard; tests reflect actual behaviour.
+Campaign route tests - covers CRUD for /campaigns.
 """
 import pytest
+from backend.auth import create_access_token
 
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def sponsor_user(db):
@@ -41,13 +37,15 @@ def sample_campaign(db, sponsor_user):
     return camp
 
 
-# ---------------------------------------------------------------------------
-# Create
-# ---------------------------------------------------------------------------
+def _headers_for(user_id: int):
+    token = create_access_token({"sub": str(user_id)})
+    return {"Authorization": f"Bearer {token}"}
+
 
 def test_create_campaign_success(client, sponsor_user):
     response = client.post(
         "/campaigns/",
+        headers=_headers_for(sponsor_user.id),
         json={
             "title": "Winter Promo",
             "description": "Cold season campaign",
@@ -62,26 +60,22 @@ def test_create_campaign_success(client, sponsor_user):
 
 
 def test_create_campaign_missing_title(client, sponsor_user):
-    """title is required; omitting it must return 422."""
     response = client.post(
         "/campaigns/",
+        headers=_headers_for(sponsor_user.id),
         json={"creator_id": sponsor_user.id}
     )
     assert response.status_code == 422
 
 
-def test_create_campaign_missing_creator(client):
-    """creator_id is required; omitting it must return 422."""
+def test_create_campaign_missing_creator(client, sponsor_user):
     response = client.post(
         "/campaigns/",
+        headers=_headers_for(sponsor_user.id),
         json={"title": "No Creator Camp"}
     )
     assert response.status_code == 422
 
-
-# ---------------------------------------------------------------------------
-# Read / List
-# ---------------------------------------------------------------------------
 
 def test_list_campaigns(client, sample_campaign):
     response = client.get("/campaigns/")
@@ -102,13 +96,10 @@ def test_get_campaign_not_found(client):
     assert response.status_code == 404
 
 
-# ---------------------------------------------------------------------------
-# Update
-# ---------------------------------------------------------------------------
-
-def test_update_campaign_success(client, sample_campaign):
+def test_update_campaign_success(client, sample_campaign, sponsor_user):
     response = client.put(
         f"/campaigns/{sample_campaign.id}",
+        headers=_headers_for(sponsor_user.id),
         json={"title": "Autumn Campaign", "status": "closed"}
     )
     assert response.status_code == 200
@@ -117,10 +108,10 @@ def test_update_campaign_success(client, sample_campaign):
     assert data["status"] == "closed"
 
 
-def test_update_campaign_partial(client, sample_campaign):
-    """Partial update: only description changes; other fields intact."""
+def test_update_campaign_partial(client, sample_campaign, sponsor_user):
     response = client.put(
         f"/campaigns/{sample_campaign.id}",
+        headers=_headers_for(sponsor_user.id),
         json={"description": "Updated description"}
     )
     assert response.status_code == 200
@@ -128,25 +119,24 @@ def test_update_campaign_partial(client, sample_campaign):
     assert response.json()["title"] == "Summer Campaign"
 
 
-def test_update_campaign_not_found(client):
-    response = client.put("/campaigns/999999", json={"title": "Ghost"})
+def test_update_campaign_not_found(client, sponsor_user):
+    response = client.put(
+        "/campaigns/999999",
+        headers=_headers_for(sponsor_user.id),
+        json={"title": "Ghost"}
+    )
     assert response.status_code == 404
 
 
-# ---------------------------------------------------------------------------
-# Delete
-# ---------------------------------------------------------------------------
-
-def test_delete_campaign_success(client, sample_campaign):
-    response = client.delete(f"/campaigns/{sample_campaign.id}")
+def test_delete_campaign_success(client, sample_campaign, sponsor_user):
+    response = client.delete(f"/campaigns/{sample_campaign.id}", headers=_headers_for(sponsor_user.id))
     assert response.status_code == 200
     assert response.json()["message"] == "Campaign deleted successfully"
 
-    # Confirm it's gone
     get_response = client.get(f"/campaigns/{sample_campaign.id}")
     assert get_response.status_code == 404
 
 
-def test_delete_campaign_not_found(client):
-    response = client.delete("/campaigns/999999")
+def test_delete_campaign_not_found(client, sponsor_user):
+    response = client.delete("/campaigns/999999", headers=_headers_for(sponsor_user.id))
     assert response.status_code == 404

@@ -14,18 +14,8 @@ const PublicProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-
   useEffect(() => {
     const fetchProfile = async () => {
-      // Explicit token check
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setError("Please login to view profiles");
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         const resp = await fetchUserProfile(userId);

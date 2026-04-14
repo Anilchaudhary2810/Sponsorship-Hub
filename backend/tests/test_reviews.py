@@ -1,17 +1,12 @@
 """
-Reviews route tests – covers /reviews endpoints.
-Note: reviews router has no auth guard; tests reflect actual behaviour.
+Reviews route tests - covers /reviews endpoints.
 """
 import pytest
+from backend.auth import create_access_token
 
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def review_deal(db):
-    """Create a minimal deal + two users to hang reviews from."""
     from backend.models import User, Deal
     from backend.crud import pwd_context
 
@@ -49,14 +44,16 @@ def review_deal(db):
     return deal, sponsor, organizer
 
 
-# ---------------------------------------------------------------------------
-# Create Review
-# ---------------------------------------------------------------------------
+def _headers_for(user_id: int):
+    token = create_access_token({"sub": str(user_id)})
+    return {"Authorization": f"Bearer {token}"}
+
 
 def test_create_review_success(client, review_deal):
-    deal, sponsor, organizer = review_deal
+    deal, sponsor, _ = review_deal
     response = client.post(
         "/reviews/",
+        headers=_headers_for(sponsor.id),
         json={
             "deal_id": deal.id,
             "reviewer_id": sponsor.id,
@@ -72,9 +69,24 @@ def test_create_review_success(client, review_deal):
     assert data["deal_id"] == deal.id
 
 
-def test_create_review_duplicate_rejected(client, review_deal):
-    """Same reviewer cannot post two reviews for the same deal (unique constraint)."""
+def test_create_review_reviewer_impersonation_blocked(client, review_deal):
     deal, sponsor, organizer = review_deal
+    response = client.post(
+        "/reviews/",
+        headers=_headers_for(sponsor.id),
+        json={
+            "deal_id": deal.id,
+            "reviewer_id": organizer.id,
+            "reviewer_role": "organizer",
+            "target_role": "sponsor",
+            "rating": 4
+        }
+    )
+    assert response.status_code == 403
+
+
+def test_create_review_duplicate_rejected(client, review_deal):
+    deal, sponsor, _ = review_deal
     payload = {
         "deal_id": deal.id,
         "reviewer_id": sponsor.id,
@@ -82,52 +94,47 @@ def test_create_review_duplicate_rejected(client, review_deal):
         "target_role": "organizer",
         "rating": 4
     }
-    client.post("/reviews/", json=payload)  # first review
-    response = client.post("/reviews/", json=payload)  # duplicate
+    client.post("/reviews/", headers=_headers_for(sponsor.id), json=payload)
+    response = client.post("/reviews/", headers=_headers_for(sponsor.id), json=payload)
     assert response.status_code == 400
 
 
 def test_create_review_invalid_rating_type(client, review_deal):
-    """Rating must be an integer; string should be rejected."""
     deal, sponsor, _ = review_deal
     response = client.post(
         "/reviews/",
+        headers=_headers_for(sponsor.id),
         json={
             "deal_id": deal.id,
             "reviewer_id": sponsor.id,
             "reviewer_role": "sponsor",
             "target_role": "organizer",
-            "rating": "five"  # invalid
+            "rating": "five"
         }
     )
     assert response.status_code == 422
 
 
 def test_create_review_missing_required_field(client, review_deal):
-    """Omitting rating should return 422."""
     deal, sponsor, _ = review_deal
     response = client.post(
         "/reviews/",
+        headers=_headers_for(sponsor.id),
         json={
             "deal_id": deal.id,
             "reviewer_id": sponsor.id,
             "reviewer_role": "sponsor",
             "target_role": "organizer"
-            # rating missing
         }
     )
     assert response.status_code == 422
 
 
-# ---------------------------------------------------------------------------
-# List Reviews
-# ---------------------------------------------------------------------------
-
-def test_list_all_reviews(client, review_deal):
+def test_list_all_reviews_admin_only(client, review_deal, test_admin):
     deal, sponsor, _ = review_deal
-    # Create one review first
     client.post(
         "/reviews/",
+        headers=_headers_for(sponsor.id),
         json={
             "deal_id": deal.id,
             "reviewer_id": sponsor.id,
@@ -136,16 +143,21 @@ def test_list_all_reviews(client, review_deal):
             "rating": 3
         }
     )
-    response = client.get("/reviews/")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
-    assert len(response.json()) >= 1
+
+    non_admin_response = client.get("/reviews/", headers=_headers_for(sponsor.id))
+    assert non_admin_response.status_code == 403
+
+    admin_response = client.get("/reviews/", headers=_headers_for(test_admin.id))
+    assert admin_response.status_code == 200
+    assert isinstance(admin_response.json(), list)
+    assert len(admin_response.json()) >= 1
 
 
 def test_get_reviews_by_deal(client, review_deal):
     deal, sponsor, _ = review_deal
     client.post(
         "/reviews/",
+        headers=_headers_for(sponsor.id),
         json={
             "deal_id": deal.id,
             "reviewer_id": sponsor.id,
@@ -162,7 +174,6 @@ def test_get_reviews_by_deal(client, review_deal):
 
 
 def test_get_reviews_for_nonexistent_deal(client):
-    """A deal with no reviews returns an empty list (not 404)."""
     response = client.get("/reviews/999999")
     assert response.status_code == 200
     assert response.json() == []

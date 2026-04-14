@@ -28,6 +28,7 @@ import {
   createCampaign,
   getAvailableInfluencers,
 } from "../services/api";
+import { getAccessToken } from "../api/api";
 import ReviewModal from "../components/ReviewModal";
 
 const SponsorDashboard = () => {
@@ -71,7 +72,7 @@ const SponsorDashboard = () => {
 
   const loadData = async () => {
     // Only proceed if we have a token
-    if (!localStorage.getItem("access_token")) return;
+    if (!getAccessToken()) return;
 
     try {
       // Pass the selected state filter to the API for better efficiency

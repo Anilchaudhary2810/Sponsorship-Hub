@@ -1,13 +1,9 @@
 """
-Event route tests – covers CRUD for /events.
-Note: current events router has no auth guard; tests reflect actual behaviour.
+Event route tests - covers CRUD for /events.
 """
 import pytest
+from backend.auth import create_access_token
 
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def organizer_user(db):
@@ -41,13 +37,15 @@ def sample_event(db, organizer_user):
     return event
 
 
-# ---------------------------------------------------------------------------
-# Create
-# ---------------------------------------------------------------------------
+def _headers_for(user_id: int):
+    token = create_access_token({"sub": str(user_id)})
+    return {"Authorization": f"Bearer {token}"}
+
 
 def test_create_event_success(client, organizer_user):
     response = client.post(
         "/events/",
+        headers=_headers_for(organizer_user.id),
         json={
             "title": "New Conference",
             "description": "Tech summit",
@@ -62,15 +60,14 @@ def test_create_event_success(client, organizer_user):
 
 
 def test_create_event_missing_required_fields(client):
-    """Missing title and organizer_id should return 422."""
     response = client.post("/events/", json={"description": "No title"})
-    assert response.status_code == 422
+    assert response.status_code == 401
 
 
 def test_create_event_invalid_date_format(client, organizer_user):
-    """Malformed date string should be rejected."""
     response = client.post(
         "/events/",
+        headers=_headers_for(organizer_user.id),
         json={
             "title": "Bad Date Event",
             "organizer_id": organizer_user.id,
@@ -79,10 +76,6 @@ def test_create_event_invalid_date_format(client, organizer_user):
     )
     assert response.status_code == 422
 
-
-# ---------------------------------------------------------------------------
-# Read / List
-# ---------------------------------------------------------------------------
 
 def test_list_events(client, sample_event):
     response = client.get("/events/")
@@ -103,48 +96,44 @@ def test_get_event_not_found(client):
     assert response.status_code == 404
 
 
-# ---------------------------------------------------------------------------
-# Update
-# ---------------------------------------------------------------------------
-
-def test_update_event_success(client, sample_event):
+def test_update_event_success(client, sample_event, organizer_user):
     response = client.put(
         f"/events/{sample_event.id}",
+        headers=_headers_for(organizer_user.id),
         json={"title": "Updated Title", "description": "New desc"}
     )
     assert response.status_code == 200
     assert response.json()["title"] == "Updated Title"
 
 
-def test_update_event_partial(client, sample_event):
-    """Only fields provided in the body are updated."""
+def test_update_event_partial(client, sample_event, organizer_user):
     response = client.put(
         f"/events/{sample_event.id}",
+        headers=_headers_for(organizer_user.id),
         json={"city": "Mumbai"}
     )
     assert response.status_code == 200
     assert response.json()["city"] == "Mumbai"
-    assert response.json()["title"] == "Test Event"  # unchanged
+    assert response.json()["title"] == "Test Event"
 
 
-def test_update_event_not_found(client):
-    response = client.put("/events/999999", json={"title": "Ghost"})
+def test_update_event_not_found(client, organizer_user):
+    response = client.put(
+        "/events/999999",
+        headers=_headers_for(organizer_user.id),
+        json={"title": "Ghost"}
+    )
     assert response.status_code == 404
 
 
-# ---------------------------------------------------------------------------
-# Delete
-# ---------------------------------------------------------------------------
-
-def test_delete_event_success(client, sample_event):
-    response = client.delete(f"/events/{sample_event.id}")
+def test_delete_event_success(client, sample_event, organizer_user):
+    response = client.delete(f"/events/{sample_event.id}", headers=_headers_for(organizer_user.id))
     assert response.status_code == 200
 
-    # Confirm it's gone
     get_response = client.get(f"/events/{sample_event.id}")
     assert get_response.status_code == 404
 
 
-def test_delete_event_not_found(client):
-    response = client.delete("/events/999999")
+def test_delete_event_not_found(client, organizer_user):
+    response = client.delete("/events/999999", headers=_headers_for(organizer_user.id))
     assert response.status_code == 404

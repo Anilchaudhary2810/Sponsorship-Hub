@@ -3,6 +3,7 @@ import api from "../api/api";
 // --- auth & user endpoints ---
 export const registerUser = (payload) => api.post("/auth/register", payload);
 export const loginUser = (payload) => api.post("/auth/login", payload);
+export const logoutUser = () => api.post("/auth/logout");
 export const fetchUser = (id) => api.get(`/users/${id}/`);
 export const updateUser = (id, updates) => api.put(`/users/${id}/`, updates);
 export const forgotPassword = (data) => api.post("/auth/request-password-reset", data);
@@ -10,6 +11,11 @@ export const resetPassword = (data) => api.post("/auth/reset-password", data);
 export const fetchUserProfile = (id) => api.get(`/users/${id}/profile`);
 export const getUsersByRole = (role) => api.get(`/users/?role=${role}`);
 export const fetchPublicStats = () => api.get("/stats/public");
+export const fetchMarketplaceSnapshot = (params = {}) => api.get("/stats/marketplace-snapshot", { params });
+export const fetchBillingPlans = () => api.get("/billing/plans");
+export const fetchMyBilling = () => api.get("/billing/me");
+export const changeMyPlan = (data) => api.post("/billing/me/change-plan", data);
+export const fetchMyBillingHistory = () => api.get("/billing/me/history");
 
 // --- events ---
 export const fetchEvents = (params = {}) => api.get("/events/", { params });

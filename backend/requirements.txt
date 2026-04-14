@@ -11,6 +11,7 @@ pydantic-settings
 razorpay
 slowapi
 python-multipart
+redis
 
 # Testing
 pytest

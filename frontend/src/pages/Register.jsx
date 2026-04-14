@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { registerUser } from "../services/api";
+import { setAccessToken } from "../api/api";
 import "./Register.css";
 
 const Register = () => {
@@ -38,10 +39,60 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // 1. Role Check
     if (!role) {
       toast.error("Please select a role");
       return;
     }
+
+    // 2. Common Field Validation
+    if (!formData.full_name || formData.full_name.trim().length < 2) {
+      toast.error("Please enter your full name");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    if (!formData.phone || formData.phone.trim().length < 10) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+
+    // 3. Role-Specific Field Validation
+    if (role === "sponsor" && (!formData.company_name || formData.company_name.trim() === "")) {
+      toast.error("Please enter your company name");
+      return;
+    }
+    if (role === "organizer" && (!formData.organization_name || formData.organization_name.trim() === "")) {
+      toast.error("Please enter your organization name");
+      return;
+    }
+    if (role === "influencer") {
+      if (!formData.instagram_handle || formData.instagram_handle.trim() === "") {
+        toast.error("Please enter your Instagram handle");
+        return;
+      }
+      if (!formData.niche || formData.niche.trim() === "") {
+        toast.error("Please enter your niche (e.g., Tech, Fashion)");
+        return;
+      }
+      if (!formData.audience_size || parseInt(formData.audience_size) <= 0) {
+        toast.error("Please enter a valid audience size");
+        return;
+      }
+    }
+
+    // 4. Password Validation
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match");
       return;
@@ -54,24 +105,22 @@ const Register = () => {
         phone: formData.phone,
         password: formData.password,
         role,
-        // Only send fields relevant to the role to ensure "perfect match" with backend logic
+        // Only send fields relevant to the role
         company_name: role === "sponsor" ? formData.company_name : null,
         organization_name: role === "organizer" ? formData.organization_name : null,
         instagram_handle: role === "influencer" ? formData.instagram_handle : null,
         niche: role === "influencer" ? formData.niche : null,
         audience_size: role === "influencer" ? (parseInt(formData.audience_size) || 0) : 0,
-        // Common optional fields initialized to null if not present
         youtube_channel: null,
       };
       
       console.log("Registering with payload:", payload);
       const resp = await registerUser(payload);
-      const { access_token, refresh_token, user } = resp.data;
-      
-      localStorage.setItem("access_token", access_token);
-      localStorage.setItem("refresh_token", refresh_token);
+      const { user, access_token } = resp.data;
+
+      setAccessToken(access_token);
       localStorage.setItem("currentUser", JSON.stringify(user));
-      toast.success("Registration successful! Welcome aboard 🎉");
+      toast.success("Registration successful. Welcome to Sponsor Hub.");
       
       const roleStr = user.role?.toLowerCase();
       if (roleStr === "sponsor") navigate("/sponsor-dashboard");
@@ -79,9 +128,15 @@ const Register = () => {
       else navigate("/influencer-dashboard");
     } catch (err) {
       console.error("Registration error:", err);
-      // Show fallback message if the interceptor didn't already toast
-      if (!err.response) {
-        toast.error("Cannot reach server. Is the backend running?");
+      
+      if (err.response) {
+        // Backend validation errors (e.g., email already exists)
+        const message = err.response.data?.detail || err.response.data?.message || "Registration failed. Please check your details.";
+        toast.error(message);
+      } else if (err.request) {
+        toast.error("No response from server. Check your connection.");
+      } else {
+        toast.error("Failed to send registration request");
       }
     }
   };
@@ -91,7 +146,7 @@ const Register = () => {
       <div className="register-card">
         <h2 className="register-title">Register</h2>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="role-container">
             <label>
               <input type="radio" value="sponsor" checked={role === "sponsor"} onChange={(e) => handleRoleChange(e.target.value)} />
@@ -145,7 +200,7 @@ const Register = () => {
                 className="password-toggle-icon" 
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? "👁️" : "👁️‍🗨️"}
+                {showPassword ? "Hide" : "Show"}
               </span>
             </div>
 
@@ -169,7 +224,7 @@ const Register = () => {
           </p>
           <p className="register-link" style={{ marginTop: '0.5rem' }}>
             <span style={{ fontSize: '0.8rem', opacity: 0.7 }} onClick={() => navigate("/")}>
-              ← Back to Homepage
+              Back to Homepage
             </span>
           </p>
         </form>

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { loginUser } from "../services/api";
+import { setAccessToken } from "../api/api";
 import SplashScreen from "./SplashScreen";
 import "./Login.css";
 
@@ -25,9 +26,8 @@ const Login = () => {
   // Use a second effect to check for existing login and redirect
   // This handles the "landing on /login when already authed" case
   React.useEffect(() => {
-    const token = localStorage.getItem("access_token");
     const user = JSON.parse(localStorage.getItem("currentUser") || "null");
-    if (token && user) {
+    if (user) {
       const role = user.role?.toLowerCase();
       if (role === "sponsor") navigate("/sponsor-dashboard");
       else if (role === "organizer") navigate("/organizer-dashboard");
@@ -49,13 +49,25 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Basic Client-side validation
+    if (!formData.email || !formData.password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     try {
       console.log("Attempting login for:", formData.email);
       const resp = await loginUser(formData);
-      const { access_token, refresh_token, user } = resp.data;
-      
-      localStorage.setItem("access_token", access_token);
-      localStorage.setItem("refresh_token", refresh_token);
+      const { user, access_token } = resp.data;
+
+      setAccessToken(access_token);
       localStorage.setItem("currentUser", JSON.stringify(user));
       
       toast.success(`Welcome back, ${user.full_name}!`);
@@ -67,9 +79,17 @@ const Login = () => {
       else navigate("/login");
     } catch (err) {
       console.error("Login error:", err);
-      // Show fallback message if the interceptor didn't already toast
-      if (!err.response) {
-        toast.error("Cannot reach server. Is the backend running?");
+      
+      if (err.response) {
+        // The server responded with a status code outside the 2xx range
+        const message = err.response.data?.detail || err.response.data?.message || "Invalid credentials or account issue";
+        toast.error(message);
+      } else if (err.request) {
+        // The request was made but no response was received
+        toast.error("No response from server. Check your connection.");
+      } else {
+        // Something happened in setting up the request
+        toast.error("Failed to send login request");
       }
     }
   };
@@ -78,12 +98,12 @@ const Login = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <div className="login-logo">SS</div>
+          <div className="login-logo">SH</div>
           <h2 className="login-title">Sign In</h2>
           <p className="login-subtitle">Continue to your Sponsorship Hub</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleSubmit} className="login-form" noValidate>
           <div className="input-group">
             <label htmlFor="email">Email Address</label>
             <input
@@ -133,7 +153,7 @@ const Login = () => {
           </p>
           <p style={{ marginTop: '0.5rem' }}>
             <span className="register-link-span" style={{ fontSize: '0.8rem', opacity: 0.7 }} onClick={() => navigate("/")}>
-              ← Back to Homepage
+              Back to Homepage
             </span>
           </p>
         </div>

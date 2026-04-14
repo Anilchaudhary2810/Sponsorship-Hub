@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Any
+import hmac
+import hashlib
 
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -18,7 +20,7 @@ ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -32,24 +34,55 @@ def create_refresh_token(data: dict):
     to_encode.update({"exp": expire, "type": "refresh"})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+def hash_token(token: str) -> str:
+    return hmac.new(
+        SECRET_KEY.encode("utf-8"),
+        token.encode("utf-8"),
+        hashlib.sha256
+    ).hexdigest()
+
+def decode_token_sub(token: str, expected_type: str) -> int:
+    payload: dict[str, Any] = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    if payload.get("type") != expected_type:
+        raise AuthenticationError("Invalid token type")
+    sub_val = payload.get("sub")
+    if sub_val is None:
+        raise AuthenticationError("Invalid token payload")
+    try:
+        return int(str(sub_val))
+    except (TypeError, ValueError):
+        raise AuthenticationError("Invalid token subject")
+
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ):
     from .logger import auth_logger
+
+    cookie_token = request.cookies.get("access_token")
+    resolved_token = token or cookie_token
+    if not resolved_token:
+        auth_logger.error("Token rejection: Missing access token")
+        raise AuthenticationError()
+
+    using_cookie_auth = token is None and cookie_token is not None
+    unsafe_methods = {"POST", "PUT", "PATCH", "DELETE"}
+    if using_cookie_auth and request.method.upper() in unsafe_methods:
+        csrf_cookie = request.cookies.get("csrf_token")
+        csrf_header = request.headers.get("X-CSRF-Token")
+        if not csrf_cookie or not csrf_header or not hmac.compare_digest(csrf_cookie, csrf_header):
+            auth_logger.error("Token rejection: CSRF validation failed")
+            raise AuthenticationError("CSRF validation failed")
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        if payload.get("type") != "access":
-            auth_logger.error("Token rejection: Invalid token type in payload")
-            raise AuthenticationError("Invalid token type")
-            
-        user_id_val = payload.get("sub")
-        if user_id_val is None:
-            auth_logger.error("Token rejection: No 'sub' field in payload")
-            raise AuthenticationError()
+        user_id_val = decode_token_sub(resolved_token, expected_type="access")
     except JWTError as e:
         auth_logger.error(f"Token rejection: JWT decode error: {str(e)}")
         raise AuthenticationError()
+    except AuthenticationError:
+        auth_logger.error("Token rejection: Invalid access token payload")
+        raise
 
     user = get_user(db, int(user_id_val))
     if user is None:
