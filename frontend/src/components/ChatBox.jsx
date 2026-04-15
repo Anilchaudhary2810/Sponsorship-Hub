@@ -29,6 +29,7 @@ const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
 
     const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
     const wsHost = apiBase.replace(/^http/, "ws");
+    const token = getAccessToken();
 
     // 1. Fetch history
     const fetchHistory = async () => {
@@ -51,14 +52,10 @@ const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
     fetchHistory();
 
     // 2. Setup WebSocket
-    const socket = new WebSocket(`${wsHost}/chat/ws/${dealId}`);
-
-    socket.onopen = () => {
-      const token = getAccessToken();
-      if (token) {
-        socket.send(JSON.stringify({ type: "auth", token }));
-      }
-    };
+    const wsUrl = token
+      ? `${wsHost}/chat/ws/${dealId}?token=${encodeURIComponent(token)}`
+      : `${wsHost}/chat/ws/${dealId}`;
+    const socket = new WebSocket(wsUrl);
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);

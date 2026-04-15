@@ -126,19 +126,9 @@ async def websocket_endpoint(websocket: WebSocket, deal_id: int, db: Session = D
         except RuntimeError:
             return
 
-    await websocket.accept()
-
     token = websocket.cookies.get("access_token")
-
-    # Backward-compatible fallback: first message can be auth envelope {"type":"auth","token":"..."}
     if not token:
-        try:
-            initial_message = await websocket.receive_text()
-            payload = json.loads(initial_message)
-            if isinstance(payload, dict) and payload.get("type") == "auth" and isinstance(payload.get("token"), str):
-                token = payload["token"]
-        except Exception:
-            token = None
+        token = websocket.query_params.get("token")
 
     if not token:
         await _safe_ws_close(code=1008)
@@ -167,6 +157,7 @@ async def websocket_endpoint(websocket: WebSocket, deal_id: int, db: Session = D
         await _safe_ws_close(code=1008)
         return
 
+    await websocket.accept()
     await manager.connect(websocket, deal_id)
     try:
         while True:

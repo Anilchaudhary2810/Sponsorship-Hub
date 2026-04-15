@@ -67,7 +67,7 @@ const OrganizerDashboard = () => {
       const [sponsorsResp, eventsResp, dealsResp] = await Promise.all([
         getAvailableSponsors(),
         fetchEvents(eventParams),
-        fetchDeals()
+        fetchDeals(),
       ]);
       
       setAvailableSponsors(sponsorsResp
@@ -261,12 +261,12 @@ const OrganizerDashboard = () => {
         <header className="dashboard-header-horizontal">
           <div className="header-main-info">
             <div className="title-action-row">
-              <h1 className="organizer-title">Organizer Command Center</h1>
+              <h1 className="organizer-title">Organizer Dashboard</h1>
               <button className="analytics-nav-btn" onClick={() => navigate('/analytics')}>
                 📊 Analytics
               </button>
             </div>
-            <p className="subtitle">Manage your events, deals, and partnerships in one place.</p>
+            <p className="subtitle">Manage events, sponsors, and signed deals in one place.</p>
           </div>
           <div className="header-actions">
             <button className="create-primary-btn" onClick={() => setIsCreateEventOpen(!isCreateEventOpen)}>
@@ -415,7 +415,14 @@ const OrganizerDashboard = () => {
                     </div>
                   </DealCard>
                 ))}
-                {deals.filter(d => d.status !== 'rejected').length === 0 && <EmptyState title="Quiet pipeline" description="Reach out to sponsors!" />}
+                {deals.filter(d => d.status !== 'rejected').length === 0 && (
+                  <EmptyState
+                    title="No active deals yet"
+                    description="Start by sending your first sponsorship proposal."
+                    actionLabel="Open Marketplace"
+                    onAction={() => setShowFilters(true)}
+                  />
+                )}
               </div>
             </div>
           </section>
@@ -430,7 +437,7 @@ const OrganizerDashboard = () => {
                       className={`filter-toggle-btn ${showFilters ? 'active' : ''}`}
                       onClick={() => setShowFilters(!showFilters)}
                     >
-                      🔍 {showFilters ? 'Hide Filters' : 'Search & Filters'}
+                      {showFilters ? "Hide Advanced" : "Advanced Filters"}
                     </button>
                   </div>
                   <p>Browse active sponsors matching your criteria.</p>
@@ -475,6 +482,24 @@ const OrganizerDashboard = () => {
                     </div>
                   </div>
                 ))}
+                {availableSponsors.filter(s => {
+                  const matchesState = selectedState === "All States" || s.state === selectedState;
+                  const matchesSearch =
+                    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    s.focus.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    s.city.toLowerCase().includes(searchTerm.toLowerCase());
+                  return matchesState && matchesSearch;
+                }).length === 0 && (
+                  <EmptyState
+                    title="No sponsors match these filters"
+                    description="Try broadening state or search terms."
+                    actionLabel="Clear Filters"
+                    onAction={() => {
+                      setSearchTerm("");
+                      setSelectedState("All States");
+                    }}
+                  />
+                )}
               </div>
             </section>
             <section className="dashboard-section-wide management-section">

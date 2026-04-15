@@ -243,6 +243,11 @@
   gap: 24px;
 }
 
+.deal-pipeline-grid > .empty-state,
+.sponsor-horizontal-grid > .empty-state {
+  grid-column: 1 / -1;
+}
+
 @media (min-width: 768px) {
   .deal-pipeline-grid {
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -517,6 +522,11 @@
     min-width: 280px;
     scroll-snap-align: center;
     flex: 0 0 auto;
+  }
+
+  .sponsor-horizontal-grid > .empty-state,
+  .deal-pipeline-grid > .empty-state {
+    min-width: 100%;
   }
 }
 

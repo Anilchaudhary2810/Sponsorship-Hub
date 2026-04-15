@@ -82,7 +82,7 @@ const SponsorDashboard = () => {
         fetchEvents(eventParams), 
         fetchDeals(),
         getAvailableInfluencers(),
-        fetchCampaigns()
+        fetchCampaigns(),
       ]);
       
       setEvents(eventsResp.data.map(mapEventData));
@@ -318,12 +318,12 @@ const SponsorDashboard = () => {
         <header className="dashboard-header-horizontal">
           <div className="header-main-info">
             <div className="title-action-row">
-              <h1 className="sponsor-title">Sponsor Command Center</h1>
+              <h1 className="sponsor-title">Sponsor Dashboard</h1>
               <button className="analytics-nav-btn" onClick={() => navigate('/analytics')}>
                 📊 Analytics
               </button>
             </div>
-            <p className="subtitle">Manage all your partnerships across events and creators.</p>
+            <p className="subtitle">Manage event sponsorships and creator campaigns from one place.</p>
           </div>
           <div className="pipeline-switcher-container">
             <div className="pipeline-tabs">
@@ -487,7 +487,14 @@ const SponsorDashboard = () => {
                 {deals.filter(d => {
                   if (activePipeline === 'events') return d.deal_type === 'sponsorship';
                   return d.deal_type === 'promotion';
-                }).length === 0 && <EmptyState title="No active deals here" description="Explore the marketplace to find new partners." />}
+                }).length === 0 && (
+                  <EmptyState
+                    title="No active deals yet"
+                    description="Create a proposal to start your pipeline."
+                    actionLabel="Open Marketplace"
+                    onAction={() => setShowFilters(true)}
+                  />
+                )}
               </div>
             </div>
           </section>
@@ -501,7 +508,7 @@ const SponsorDashboard = () => {
                     className={`filter-toggle-btn ${showFilters ? 'active' : ''}`}
                     onClick={() => setShowFilters(!showFilters)}
                   >
-                    🔍 {showFilters ? 'Hide Filters' : 'Search & Filters'}
+                    {showFilters ? "Hide Advanced" : "Advanced Filters"}
                   </button>
                 </div>
                 <p>{activePipeline === 'events' ? 'Discover premium events looking for sponsors.' : 'Find high-impact creators to boost your brand.'}</p>
@@ -570,6 +577,20 @@ const SponsorDashboard = () => {
                     </div>
                   );
                 })}
+                {filteredEvents.length === 0 && (
+                  <EmptyState
+                    title="No events found"
+                    description="Adjust search or filters to discover more events."
+                    actionLabel="Clear Filters"
+                    onAction={() => {
+                      setSearchTerm("");
+                      setFilterCategory("All Categories");
+                      setFilterCity("All Cities");
+                      setMinBudget("");
+                      setMaxBudget("");
+                    }}
+                  />
+                )}
               </div>
             ) : (
               <div className="creator-horizontal-grid">
@@ -596,6 +617,18 @@ const SponsorDashboard = () => {
                     </div>
                   );
                 })}
+                {filteredInfluencers.length === 0 && (
+                  <EmptyState
+                    title="No creators found"
+                    description="Clear filters to view a broader creator set."
+                    actionLabel="Clear Filters"
+                    onAction={() => {
+                      setSearchTerm("");
+                      setFilterCategory("All Categories");
+                      setMinBudget("");
+                    }}
+                  />
+                )}
               </div>
             )}
           </section>

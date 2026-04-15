@@ -42,7 +42,7 @@ const InfluencerDashboard = () => {
     try {
       const [campResp, dealsResp] = await Promise.all([
         fetchCampaigns(),
-        fetchDeals()
+        fetchDeals(),
       ]);
       setCampaigns(campResp.data);
       const myDeals = dealsResp.data.filter(d => Number(d.influencer_id) === Number(currentUser.id));
@@ -149,12 +149,12 @@ const InfluencerDashboard = () => {
         <header className="dashboard-header-horizontal">
           <div className="header-main-info">
             <div className="title-action-row">
-              <h1 className="influencer-title">Creator Studio</h1>
+              <h1 className="influencer-title">Influencer Dashboard</h1>
               <button className="analytics-nav-btn" onClick={() => navigate('/analytics')}>
                 📊 Analytics
               </button>
             </div>
-            <p className="subtitle">Collaborate with premium brands and manage your campaigns.</p>
+            <p className="subtitle">Track brand opportunities and close campaign deals faster.</p>
           </div>
         </header>
 
@@ -174,7 +174,7 @@ const InfluencerDashboard = () => {
                     <div className="deal-card-content-wide">
                       <h4 className="deal-title-mini">{deal.campaign?.title || "Brand Partnership"}</h4>
                       <p className="deal-sponsor-name">
-                        Client: 
+                        Client: 
                         <span
                           className="profile-link"
                           onClick={() => navigate(`/profile/${deal.sponsor_id}`)}
@@ -232,7 +232,14 @@ const InfluencerDashboard = () => {
                     </div>
                   </DealCard>
                 ))}
-                {deals.filter(d => d.status !== 'rejected').length === 0 && <EmptyState title="Pipeline empty" description="Apply to campaigns or wait for brand invites." />}
+                {deals.filter(d => d.status !== 'rejected').length === 0 && (
+                  <EmptyState
+                    title="No active deals yet"
+                    description="Apply to a campaign to start your pipeline."
+                    actionLabel="View Opportunities"
+                    onAction={() => setShowFilters(true)}
+                  />
+                )}
               </div>
             </div>
           </section>
@@ -247,7 +254,7 @@ const InfluencerDashboard = () => {
                     className={`filter-toggle-btn ${showFilters ? 'active' : ''}`}
                     onClick={() => setShowFilters(!showFilters)}
                   >
-                    🔍 {showFilters ? 'Hide Filters' : 'Search & Filters'}
+                      {showFilters ? "Hide Advanced" : "Advanced Filters"}
                   </button>
                 </div>
                 <p>Explore open campaigns looking for creative talent.</p>
@@ -293,6 +300,18 @@ const InfluencerDashboard = () => {
                   </div>
                 );
               })}
+              {campaigns.filter(c =>
+                c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.platform_required.toLowerCase().includes(searchTerm.toLowerCase())
+              ).length === 0 && (
+                <EmptyState
+                  title="No campaigns found"
+                  description="Try a broader keyword to discover more opportunities."
+                  actionLabel="Clear Search"
+                  onAction={() => setSearchTerm("")}
+                />
+              )}
             </div>
           </section>
         </div>

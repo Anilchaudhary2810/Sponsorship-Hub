@@ -49,15 +49,14 @@ const NotificationBell = () => {
     const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
     // Replace http/https with ws/wss dynamically
     const wsBase = apiBase.replace(/^http/, "ws");
-    const wsUrl = `${wsBase}/ws/notifications/${userId}`;
+    const token = getAccessToken();
+    const wsUrl = token
+      ? `${wsBase}/ws/notifications/${userId}?token=${encodeURIComponent(token)}`
+      : `${wsBase}/ws/notifications/${userId}`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
     socket.onopen = () => {
-      const token = getAccessToken();
-      if (token) {
-        socket.send(JSON.stringify({ type: "auth", token }));
-      }
       // Clear any pending reconnect when connection succeeds
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
