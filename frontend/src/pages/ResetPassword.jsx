@@ -28,7 +28,15 @@ const ResetPassword = () => {
       toast.success("Password reset successfully! Redirecting to login...");
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      console.error(err);
+      console.warn("Auth recovery request failed", {
+        status: err?.response?.status ?? null,
+        code: err?.code ?? null,
+      });
+      if (err.response) {
+        toast.error(err.response.data?.detail || "Could not reset password");
+      } else {
+        toast.error("Network error. Please try again later.");
+      }
     } finally {
       setIsLoading(false);
     }

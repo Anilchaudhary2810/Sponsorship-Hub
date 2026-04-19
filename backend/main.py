@@ -25,11 +25,19 @@ from .routers import (
     stats_router,
     ops_router,
     billing_router,
+    trust_router,
+    proposal_tools_router,
+    revenue_router,
+    collaboration_router,
+    retention_router,
+    reporting_router,
+    integrations_router,
 )
 
 # ✅ Import limiter ONLY from core
 from backend.core.limiter import limiter
 from backend.core.realtime import realtime_bus
+from backend.core.notifications import notification_manager
 from backend.core.metrics import record_request
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -167,6 +175,13 @@ app.include_router(reviews_router)
 app.include_router(stats_router)
 app.include_router(ops_router)
 app.include_router(billing_router)
+app.include_router(trust_router)
+app.include_router(proposal_tools_router)
+app.include_router(revenue_router)
+app.include_router(collaboration_router)
+app.include_router(retention_router)
+app.include_router(reporting_router)
+app.include_router(integrations_router)
 
 
 @app.on_event("startup")
@@ -176,6 +191,7 @@ async def startup_realtime_bus():
 
 @app.on_event("shutdown")
 async def shutdown_realtime_bus():
+    await notification_manager.shutdown()
     await realtime_bus.stop()
 
 

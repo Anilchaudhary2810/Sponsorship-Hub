@@ -1,44 +1,43 @@
 import axios from "axios";
 import toast from "react-hot-toast";
 
-const ACCESS_TOKEN_KEY = "access_token";
+// Cookie-only auth strategy. Keep these exports for backward compatibility,
+// but never store bearer tokens in browser storage.
+export const setAccessToken = () => {};
+export const getAccessToken = () => null;
+export const clearAccessToken = () => {};
 
-const readStoredToken = () => {
-  try {
-    return sessionStorage.getItem(ACCESS_TOKEN_KEY);
-  } catch {
-    return null;
+const normalizeLocalApiBase = (rawBaseUrl) => {
+  if (typeof window === "undefined") {
+    return rawBaseUrl || "http://localhost:8000";
   }
-};
 
-const writeStoredToken = (token) => {
+  const pageHost = window.location.hostname;
+  const fallback = `http://${pageHost}:8000`;
+  const baseCandidate = rawBaseUrl || fallback;
+
   try {
-    if (token) {
-      sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
-    } else {
-      sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    const parsed = new URL(baseCandidate, window.location.origin);
+    const isLoopback = (host) =>
+      host === "localhost" || host === "127.0.0.1" || host === "::1";
+
+    // In local dev, force API host to match current page host so
+    // SameSite=Lax cookies remain first-party and are sent on XHR/WS.
+    if (isLoopback(parsed.hostname) && isLoopback(pageHost) && parsed.hostname !== pageHost) {
+      parsed.hostname = pageHost;
     }
+
+    return parsed.toString().replace(/\/$/, "");
   } catch {
-    // Ignore storage failures (private mode, blocked storage, etc.)
+    return fallback;
   }
 };
 
-let accessToken = readStoredToken();
-
-export const setAccessToken = (token) => {
-  accessToken = token || null;
-  writeStoredToken(accessToken);
-};
-
-export const getAccessToken = () => accessToken;
-
-export const clearAccessToken = () => {
-  accessToken = null;
-  writeStoredToken(null);
-};
+export const API_BASE_URL = normalizeLocalApiBase(import.meta.env.VITE_API_URL);
+export const WS_BASE_URL = API_BASE_URL.replace(/^http/i, "ws");
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
+  baseURL: API_BASE_URL,
   withCredentials: true,
 });
 
@@ -51,7 +50,6 @@ const shouldSkipRefresh = (url = "") =>
   url.includes("/auth/logout");
 
 const handleAuthFailure = (message) => {
-  clearAccessToken();
   localStorage.removeItem("currentUser");
 
   if (message) {
@@ -74,10 +72,6 @@ const getCookieValue = (name) => {
 };
 
 api.interceptors.request.use((config) => {
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
-  }
-
   const method = String(config.method || "get").toUpperCase();
   const unsafeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
   if (unsafeMethods.has(method)) {
@@ -111,20 +105,12 @@ api.interceptors.response.use(
       }
 
       const refreshResponse = await refreshPromise;
-      const refreshedToken = refreshResponse?.data?.access_token;
       const refreshedUser = refreshResponse?.data?.user;
 
-      if (!refreshedToken) {
-        throw new Error("Missing refreshed access token");
-      }
-
-      setAccessToken(refreshedToken);
       if (refreshedUser) {
         localStorage.setItem("currentUser", JSON.stringify(refreshedUser));
       }
 
-      originalRequest.headers = originalRequest.headers || {};
-      originalRequest.headers.Authorization = `Bearer ${refreshedToken}`;
       return api(originalRequest);
     } catch (refreshError) {
       const errorMessage =

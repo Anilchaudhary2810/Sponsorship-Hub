@@ -10,6 +10,13 @@ from .chat import router as chat_router
 from .stats import router as stats_router
 from .ops import router as ops_router
 from .billing import router as billing_router
+from .trust import router as trust_router
+from .proposal_tools import router as proposal_tools_router
+from .revenue import router as revenue_router
+from .collaboration import router as collaboration_router
+from .retention import router as retention_router
+from .reporting import router as reporting_router
+from .integrations import router as integrations_router
 
 __all__ = [
     "users_router", 
@@ -25,4 +32,11 @@ __all__ = [
     "stats_router",
     "ops_router",
     "billing_router",
+    "trust_router",
+    "proposal_tools_router",
+    "revenue_router",
+    "collaboration_router",
+    "retention_router",
+    "reporting_router",
+    "integrations_router",
 ]

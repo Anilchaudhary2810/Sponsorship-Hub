@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { registerUser } from "../services/api";
-import { setAccessToken } from "../api/api";
 import "./Register.css";
 
 const Register = () => {
@@ -114,20 +113,21 @@ const Register = () => {
         youtube_channel: null,
       };
       
-      console.log("Registering with payload:", payload);
       const resp = await registerUser(payload);
-      const { user, access_token } = resp.data;
-
-      setAccessToken(access_token);
-      localStorage.setItem("currentUser", JSON.stringify(user));
-      toast.success("Registration successful. Welcome to Sponsor Hub.");
-      
-      const roleStr = user.role?.toLowerCase();
-      if (roleStr === "sponsor") navigate("/sponsor-dashboard");
-      else if (roleStr === "organizer") navigate("/organizer-dashboard");
-      else navigate("/influencer-dashboard");
+      const message =
+        resp.data?.message || "Registration successful. Please verify your email before login.";
+      toast.success(message);
+      const previewToken = resp.data?.verification_token_preview;
+      if (previewToken) {
+        navigate(`/verify-email?token=${encodeURIComponent(previewToken)}`);
+      } else {
+        navigate("/login");
+      }
     } catch (err) {
-      console.error("Registration error:", err);
+      console.warn("Registration request failed", {
+        status: err?.response?.status ?? null,
+        code: err?.code ?? null,
+      });
       
       if (err.response) {
         // Backend validation errors (e.g., email already exists)

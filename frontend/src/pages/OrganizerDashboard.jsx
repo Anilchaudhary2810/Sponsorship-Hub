@@ -6,6 +6,7 @@ import ChatBox from "../components/ChatBox";
 import DashboardStats from "../components/DashboardStats";
 import EmptyState from "../components/EmptyState";
 import DealCard from "../components/DealCard";
+import QuickActionsBar from "../components/QuickActionsBar";
 import MediaPortfolio from "../components/MediaPortfolio";
 import { formatCurrency } from "../utils/formatCurrency";
 import { mapEventData, mapDealData } from "../utils/mapping";
@@ -71,14 +72,13 @@ const OrganizerDashboard = () => {
       ]);
       
       setAvailableSponsors(sponsorsResp
-        .filter(u => !u.full_name?.toLowerCase().includes("test") && !u.company_name?.toLowerCase().includes("test"))
         .map(u => ({
           id: u.id,
           name: u.full_name || u.company_name || "Sponsor",
           focus: u.focus || "N/A",
           state: u.state || "N/A",
           city: u.city || "N/A",
-          preferredBudget: u.preferred_budget ? `₹${Number(u.preferred_budget).toLocaleString("en-IN")}` : "N/A",
+          preferredBudget: u.preferred_budget ? `â‚¹${Number(u.preferred_budget).toLocaleString("en-IN")}` : "N/A",
           about: u.about || "N/A",
         })));
 
@@ -221,10 +221,19 @@ const OrganizerDashboard = () => {
       setReviewedDeals(prev => ({ ...prev, [reviewDeal.id]: reviewData.rating }));
       setShowReviewModal(false);
       setReviewDeal(null);
-      toast.success("⭐ Review submitted! Thank you.");
+      toast.success("Review submitted! Thank you.");
       loadData();
     } catch {}
   };
+
+  const getDealPartnerName = (deal) => deal.sponsorName || "Sponsor";
+  const getDealSubject = (deal) => deal.event?.title || "Event sponsorship";
+  const getDealSubline = (deal) => {
+    const city = deal.event?.city || deal.event?.location || "Location TBD";
+    return `${city} - Sponsorship Deal`;
+  };
+  const getDealValue = (deal) =>
+    Number(deal.paymentAmount) || Number(deal.event?.raw_budget) || Number(deal.event?.budget) || 0;
 
   const handleAddMedia = async (eventId, mediaItem) => {
     const event = events.find(e => e.id === eventId);
@@ -254,6 +263,13 @@ const OrganizerDashboard = () => {
     { title: "Revenue", value: formatCurrency(deals.filter(d => d.paymentDone).reduce((s, d) => s + (Number(d.paymentAmount) || 0), 0)) },
   ];
 
+  const quickActions = [
+    { key: "create", label: "Create Event", tone: "primary", onClick: () => setIsCreateEventOpen(true) },
+    { key: "ops", label: "Scale Ops", tone: "emphasis", onClick: () => navigate("/scale-ops") },
+    { key: "analytics", label: "Analytics", onClick: () => navigate("/analytics") },
+    { key: "profile", label: "Profile", onClick: () => navigate("/my-profile") },
+  ];
+
   return (
     <div>
       <Navbar role="organizer" />
@@ -263,14 +279,14 @@ const OrganizerDashboard = () => {
             <div className="title-action-row">
               <h1 className="organizer-title">Organizer Dashboard</h1>
               <button className="analytics-nav-btn" onClick={() => navigate('/analytics')}>
-                📊 Analytics
+                ðŸ“Š Analytics
               </button>
             </div>
             <p className="subtitle">Manage events, sponsors, and signed deals in one place.</p>
           </div>
           <div className="header-actions">
             <button className="create-primary-btn" onClick={() => setIsCreateEventOpen(!isCreateEventOpen)}>
-              {isCreateEventOpen ? "✕ Close Form" : "＋ Create New Event"}
+              {isCreateEventOpen ? "âœ• Close Form" : "ï¼‹ Create New Event"}
             </button>
             <div className="header-filters">
               <select value={selectedState} onChange={(e) => setSelectedState(e.target.value)} className="horizontal-select">
@@ -321,7 +337,7 @@ const OrganizerDashboard = () => {
                     <label>Budget Needed</label>
                     <div className="budget-input-group">
                       <select name="currency" value={formData.currency} onChange={handleChange}>
-                        <option value="INR">₹</option>
+                        <option value="INR">â‚¹</option>
                         <option value="USD">$</option>
                       </select>
                       <input type="number" name="budget" placeholder="0" required value={formData.budget} onChange={handleChange} />
@@ -347,7 +363,7 @@ const OrganizerDashboard = () => {
         )}
 
         <DashboardStats stats={stats} />
-
+        <QuickActionsBar actions={quickActions} />
         <div className="horizontal-sections-stack">
           <section className="dashboard-section-wide">
             <div className="section-header">
@@ -359,19 +375,26 @@ const OrganizerDashboard = () => {
                 {deals.filter(d => d.status !== 'rejected').map(deal => (
                   <DealCard key={deal.id} deal={deal}>
                     <div className="deal-card-content-wide">
+                      <div className="deal-type-chip">Event Deal</div>
                       <h4 className="deal-sponsor-name">
                         <span
                           className="profile-link"
                           onClick={() => navigate(`/profile/${deal.sponsor_id}`)}
                           title="View Sponsor Profile"
                         >
-                          {deal.sponsorName}
+                          {getDealPartnerName(deal)}
                         </span>
                       </h4>
+                      <p className="deal-subject-line">{getDealSubject(deal)}</p>
+                      <p className="deal-context-line">{getDealSubline(deal)}</p>
+                      <div className="deal-meta-row">
+                        <span className="deal-meta-item">Value: {formatCurrency(getDealValue(deal))}</span>
+                        <span className="deal-meta-item">ID: #{deal.id}</span>
+                      </div>
                       <div className="status-grid">
                         <span className={`status-pill ${deal.status}`}>{deal.status}</span>
                         <span className={`status-item ${deal.paymentDone ? 'done' : 'pending'}`}>
-                          {deal.paymentDone ? '✅ Paid' : '⏳ Unpaid'}
+                          {deal.paymentDone ? "Paid" : "Payment Pending"}
                         </span>
                       </div>
                       <div className="deal-actions-row">
@@ -381,34 +404,48 @@ const OrganizerDashboard = () => {
                             <button className="mini-action-btn reject" onClick={() => handleDealAction(deal.id, acceptDeal, { role: "organizer", accept: false })}>Reject</button>
                           </>
                         )}
-                        {deal.paymentDone && !deal.organizerSigned && <button className="mini-action-btn legal" onClick={() => handleStartSigning(deal)}>Sign</button>}
-                        <div className="doc-buttons-group" style={{ display: 'flex', gap: '4px' }}>
-                          {deal.organizerSigned && (
-                            <button className="mini-action-btn legal-outline" onClick={() => setShowDocument({ type: 'agreement', deal })}>📄 Agreement</button>
-                          )}
-                          {deal.paymentDone && (
-                            <button className="mini-action-btn primary-outline" onClick={() => setShowDocument({ type: 'invoice', deal })}>🧾 Invoice</button>
-                          )}
+                        <button
+                          className="mini-action-btn legal"
+                          disabled={!deal.paymentDone || deal.organizerSigned}
+                          onClick={() => deal.paymentDone && !deal.organizerSigned && handleStartSigning(deal)}
+                        >
+                          Sign
+                        </button>
                         </div>
-                        {deal.status === 'closed' && (
-                          reviewedDeals[deal.id] ? (
-                            <div className="reviewed-badge">
-                              {Array.from({ length: 5 }, (_, i) => (
-                                <span key={i} className={i < reviewedDeals[deal.id] ? 'rstar filled' : 'rstar'}>★</span>
-                              ))}
-                              <span className="reviewed-label">Reviewed</span>
-                            </div>
-                          ) : (
-                            <button 
-                              className="mini-action-btn review" 
-                              onClick={() => {
-                                setReviewDeal(deal);
-                                setShowReviewModal(true);
-                              }}
-                            >
-                              ⭐ Review
-                            </button>
-                          )
+                      <div className="pipeline-main-actions">
+                        <button
+                          className="mini-action-btn legal-outline"
+                          disabled={!deal.organizerSigned}
+                          onClick={() => deal.organizerSigned && setShowDocument({ type: "agreement", deal })}
+                        >
+                          Agreement
+                        </button>
+                        <button
+                          className="mini-action-btn primary-outline"
+                          disabled={!deal.paymentDone}
+                          onClick={() => deal.paymentDone && setShowDocument({ type: "invoice", deal })}
+                        >
+                          Invoice
+                        </button>
+                        {reviewedDeals[deal.id] ? (
+                          <div className="reviewed-badge">
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <span key={i} className={i < reviewedDeals[deal.id] ? "rstar filled" : "rstar"}>*</span>
+                            ))}
+                            <span className="reviewed-label">Reviewed</span>
+                          </div>
+                        ) : (
+                          <button
+                            className="mini-action-btn review"
+                            disabled={deal.status !== "closed"}
+                            onClick={() => {
+                              if (deal.status !== "closed") return;
+                              setReviewDeal(deal);
+                              setShowReviewModal(true);
+                            }}
+                          >
+                            Review
+                          </button>
                         )}
                         <button className="mini-action-btn chat" onClick={() => setActiveDealChat(deal)}>Chat</button>
                       </div>
@@ -440,7 +477,7 @@ const OrganizerDashboard = () => {
                       {showFilters ? "Hide Advanced" : "Advanced Filters"}
                     </button>
                   </div>
-                  <p>Browse active sponsors matching your criteria.</p>
+                  <p>Browse active sponsors using your selected criteria.</p>
                 </div>
 
                 {showFilters && (
@@ -475,10 +512,10 @@ const OrganizerDashboard = () => {
                         onClick={() => navigate(`/profile/${s.id}`)}
                       >{s.full_name || s.name}</span>
                     </h3>
-                    <p className="sponsor-meta">{s.focus} • {s.city}</p>
+                    <p className="sponsor-meta">{s.focus} â€¢ {s.city}</p>
                     <div className="sponsor-card-actions">
                       <button className="view-deal-btn" onClick={() => { setSelectedSponsor(s); setIsSponsorDetailsOpen(true); }}>Propose Partnership</button>
-                      <button className="mini-profile-btn" onClick={() => navigate(`/profile/${s.id}`)}>👤 Profile</button>
+                      <button className="mini-profile-btn" onClick={() => navigate(`/profile/${s.id}`)}>ðŸ‘¤ Profile</button>
                     </div>
                   </div>
                 ))}
@@ -512,10 +549,10 @@ const OrganizerDashboard = () => {
                     <div className="event-row-info">
                       <h4>{e.title}</h4>
                       <div className="event-row-meta">
-                        <span>📍 {e.city}</span>
-                        <span className="divider">•</span>
-                        <span>💰 {formatCurrency(e.budget, e.currency)}</span>
-                        {(e.media_items?.length > 0) && <span className="media-badge">🖼️ {e.media_items.length} Photos</span>}
+                        <span>ðŸ“ {e.city}</span>
+                        <span className="divider">â€¢</span>
+                        <span>ðŸ’° {formatCurrency(e.budget, e.currency)}</span>
+                        {(e.media_items?.length > 0) && <span className="media-badge">ðŸ–¼ï¸ {e.media_items.length} Photos</span>}
                       </div>
                     </div>
                     <div className="event-row-actions">
@@ -524,9 +561,9 @@ const OrganizerDashboard = () => {
                         onClick={() => setSelectedEventForMedia(selectedEventForMedia === e.id ? null : e.id)}
                         title="Manage Portfolio"
                       >
-                        {selectedEventForMedia === e.id ? "✕ Gallery" : "🖼️ Gallery"}
+                        {selectedEventForMedia === e.id ? "âœ• Gallery" : "ðŸ–¼ï¸ Gallery"}
                       </button>
-                      <button className="delete-action-pill" onClick={() => { setEventToDelete(e.id); setIsDeleteDialogOpen(true); }} title="Remove Event">🗑️</button>
+                      <button className="delete-action-pill" onClick={() => { setEventToDelete(e.id); setIsDeleteDialogOpen(true); }} title="Remove Event">ðŸ—‘ï¸</button>
                     </div>
                   </div>
                 ))}
@@ -541,7 +578,7 @@ const OrganizerDashboard = () => {
           return ev ? (
             <MediaPortfolio
               items={ev.media_items || []}
-              title={`${ev.title} — Portfolio`}
+              title={`${ev.title} â€” Portfolio`}
               canEdit={Number(ev.organizer_id) === Number(currentUser.id)}
               onAdd={(item) => handleAddMedia(ev.id, item)}
               onDelete={(idx) => handleDeleteMedia(ev.id, idx)}
@@ -574,16 +611,16 @@ const OrganizerDashboard = () => {
         </div>
       )}
       {isSponsorDetailsOpen && selectedSponsor && (
-        <div className="delete-dialog-overlay">
-          <div className="delete-dialog glass-morphism">
-            <div className="dialog-icon">🏢</div>
-            <h3 className="dialog-title">Partner with {selectedSponsor.name}</h3>
-            <p className="dialog-desc">Select an event you'd like to propose for sponsorship.</p>
-            
+        <div className="proposal-modal-overlay" onClick={() => setIsSponsorDetailsOpen(false)}>
+          <div className="proposal-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="proposal-modal-icon">{"\uD83E\uDD1D"}</div>
+            <h3 className="proposal-modal-title">Partner with {selectedSponsor.name}</h3>
+            <p className="proposal-modal-desc">Select an event you'd like to propose for sponsorship.</p>
+
             <div className="event-selector-list">
               {events.filter(e => Number(e.organizer_id) === Number(currentUser.id)).map(e => (
-                <div 
-                  key={e.id} 
+                <div
+                  key={e.id}
                   className={`selector-item ${formData.event_id === e.id ? 'active' : ''}`}
                   onClick={() => setFormData({ ...formData, event_id: e.id })}
                 >
@@ -596,16 +633,16 @@ const OrganizerDashboard = () => {
               )}
             </div>
 
-            <div className="delete-dialog-actions">
-              <button className="delete-cancel-btn" onClick={() => setIsSponsorDetailsOpen(false)}>Cancel</button>
-              <button 
-                className="delete-confirm-btn proposal-btn" 
+            <div className="proposal-modal-actions">
+              <button className="proposal-cancel-btn" onClick={() => setIsSponsorDetailsOpen(false)}>Cancel</button>
+              <button
+                className="proposal-confirm-btn"
                 disabled={!formData.event_id || isSubmitting}
                 onClick={async () => {
                   setIsSubmitting(true);
                   try {
-                    await createDeal({ 
-                      sponsor_id: selectedSponsor.id, 
+                    await createDeal({
+                      sponsor_id: selectedSponsor.id,
                       organizer_id: currentUser.id,
                       event_id: formData.event_id,
                       deal_type: "sponsorship"
@@ -635,3 +672,7 @@ const OrganizerDashboard = () => {
 };
 
 export default OrganizerDashboard;
+
+
+
+

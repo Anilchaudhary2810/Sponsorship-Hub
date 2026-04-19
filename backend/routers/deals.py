@@ -282,32 +282,11 @@ async def mark_payment_done(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    db_deal = crud.get_deal(db, deal_id)
-    if not db_deal:
-        raise exceptions.ValidationError("Deal not found")
-
-    current_user_id = _to_int(getattr(current_user, "id", 0))
-    current_user_name = _to_str(getattr(current_user, "full_name", "A user"), default="A user")
-    sponsor_id = _to_optional_int(getattr(db_deal, "sponsor_id", None))
-
-    if sponsor_id is None or current_user_id != sponsor_id:
-        raise exceptions.AuthorizationError(f"Only sponsors can pay for this deal. User ID {current_user_id} != Sponsor ID {sponsor_id}")
-         
-    result = crud.deal_payment(db, deal_id, payment)
-    if not result:
-        raise exceptions.BusinessLogicError("Payment update failed")
-
-    _audit(db, request, "deal.payment_marked", current_user_id, deal_id, {"amount": str(payment.amount), "currency": payment.currency})
-    await _notify_participants(
-        db=db,
-        deal_obj=db_deal,
-        actor_user_id=current_user_id,
-        title="Payment Received!",
-        message=f"A payment of {payment.amount} {payment.currency} has been recorded for your deal.",
-        notification_type="payment",
+    del request, deal_id, payment, db, current_user
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Manual payment updates are disabled. Use /payments/create-order and provider webhook confirmation."
     )
-
-    return result
 
 
 # NO MANUAL PAYMENT ENDPOINT ALLOWED

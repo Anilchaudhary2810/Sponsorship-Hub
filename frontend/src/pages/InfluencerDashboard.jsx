@@ -6,6 +6,7 @@ import ChatBox from "../components/ChatBox";
 import DashboardStats from "../components/DashboardStats";
 import EmptyState from "../components/EmptyState";
 import DealCard from "../components/DealCard";
+import QuickActionsBar from "../components/QuickActionsBar";
 import { formatCurrency } from "../utils/formatCurrency";
 import { mapDealData } from "../utils/mapping";
 import "./InfluencerDashboard.css";
@@ -37,6 +38,8 @@ const InfluencerDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showDocument, setShowDocument] = useState(null);
+  const [pendingCampaign, setPendingCampaign] = useState(null);
+  const [showApplyDialog, setShowApplyDialog] = useState(false);
 
   const loadData = async () => {
     try {
@@ -96,6 +99,18 @@ const InfluencerDashboard = () => {
     } finally { setIsSubmitting(false); }
   };
 
+  const handleOpenApplyDialog = (campaign) => {
+    setPendingCampaign(campaign);
+    setShowApplyDialog(true);
+  };
+
+  const confirmApplyCampaign = async () => {
+    if (!pendingCampaign) return;
+    await handleApply(pendingCampaign);
+    setShowApplyDialog(false);
+    setPendingCampaign(null);
+  };
+
   const handleDealAction = async (dealId, actionFn, payload) => {
     setIsSubmitting(true);
     try {
@@ -125,10 +140,19 @@ const InfluencerDashboard = () => {
       setReviewedDeals(prev => ({ ...prev, [reviewDeal.id]: reviewData.rating }));
       setShowReviewModal(false);
       setReviewDeal(null);
-      toast.success("⭐ Review submitted! Thank you.");
+      toast.success("Review submitted! Thank you.");
       loadData();
     } catch {}
   };
+
+  const getDealPartnerName = (deal) => deal.sponsorName || "Sponsor";
+  const getDealSubject = (deal) => deal.campaign?.title || "Creator campaign";
+  const getDealSubline = (deal) => {
+    const platform = deal.campaign?.platform_required || "Multi-platform";
+    return `${platform} - Creator Promotion`;
+  };
+  const getDealValue = (deal) =>
+    Number(deal.paymentAmount) || Number(deal.campaign?.budget) || 0;
 
   const stats = [
     { title: "Live Campaigns", value: campaigns.length },
@@ -142,6 +166,13 @@ const InfluencerDashboard = () => {
     },
   ];
 
+  const quickActions = [
+    { key: "discover", label: "Discover", tone: "primary", onClick: () => setShowFilters(true) },
+    { key: "ops", label: "Scale Ops", tone: "emphasis", onClick: () => navigate("/scale-ops") },
+    { key: "analytics", label: "Analytics", onClick: () => navigate("/analytics") },
+    { key: "profile", label: "Profile", onClick: () => navigate("/my-profile") },
+  ];
+
   return (
     <div>
       <Navbar role="influencer" />
@@ -151,7 +182,7 @@ const InfluencerDashboard = () => {
             <div className="title-action-row">
               <h1 className="influencer-title">Influencer Dashboard</h1>
               <button className="analytics-nav-btn" onClick={() => navigate('/analytics')}>
-                📊 Analytics
+                ðŸ“Š Analytics
               </button>
             </div>
             <p className="subtitle">Track brand opportunities and close campaign deals faster.</p>
@@ -159,7 +190,7 @@ const InfluencerDashboard = () => {
         </header>
 
         <DashboardStats stats={stats} />
-
+        <QuickActionsBar actions={quickActions} />
         <div className="horizontal-sections-stack">
           {/* Active Deals Section */}
           <section className="dashboard-section-wide">
@@ -172,62 +203,79 @@ const InfluencerDashboard = () => {
                 {deals.filter(d => d.status !== 'rejected').map(deal => (
                   <DealCard key={deal.id} deal={deal}>
                     <div className="deal-card-content-wide">
-                      <h4 className="deal-title-mini">{deal.campaign?.title || "Brand Partnership"}</h4>
-                      <p className="deal-sponsor-name">
-                        Client: 
+                      <div className="deal-type-chip">Creator Deal</div>
+                      <h4 className="deal-title-mini">
                         <span
                           className="profile-link"
                           onClick={() => navigate(`/profile/${deal.sponsor_id}`)}
                           title="View Sponsor Profile"
                         >
-                          {deal.sponsorName}
+                          {getDealPartnerName(deal)}
                         </span>
-                      </p>
+                      </h4>
+                      <p className="deal-subject-line">{getDealSubject(deal)}</p>
+                      <p className="deal-context-line">{getDealSubline(deal)}</p>
+                      <div className="deal-meta-row">
+                        <span className="deal-meta-item">Value: {formatCurrency(getDealValue(deal))}</span>
+                        <span className="deal-meta-item">ID: #{deal.id}</span>
+                      </div>
                       <div className="status-grid">
                         <span className={`status-pill ${deal.status}`}>{deal.status.replace('_', ' ')}</span>
                         <span className={`status-item ${deal.paymentDone ? 'done' : 'pending'}`}>
-                          {deal.paymentDone ? '✅ Paid' : (deal.status === 'payment_pending' ? '⏳ Awaiting' : '⏳ Pending')}
+                          {deal.paymentDone ? "Paid" : "Payment Pending"}
                         </span>
                       </div>
                       <div className="deal-actions-row">
                         {deal.status === 'proposed' && !deal.influencerAccepted && (
                           <>
-                            <button className="mini-action-btn primary" onClick={() => handleDealAction(deal.id, acceptDeal, { role: "influencer", accept: true })}>✓ Accept</button>
-                            <button className="mini-action-btn reject" onClick={() => handleDealAction(deal.id, acceptDeal, { role: "influencer", accept: false })}>✕ Decline</button>
+                            <button className="mini-action-btn primary" onClick={() => handleDealAction(deal.id, acceptDeal, { role: "influencer", accept: true })}>Accept</button>
+                            <button className="mini-action-btn reject" onClick={() => handleDealAction(deal.id, acceptDeal, { role: "influencer", accept: false })}>Reject</button>
                           </>
                         )}
-                        {deal.paymentDone && !deal.influencerSigned && (
-                          <button className="mini-action-btn legal" onClick={() => handleStartSigning(deal)}>📄 Sign</button>
-                        )}
-                        <div className="doc-buttons-group" style={{ display: 'flex', gap: '4px' }}>
-                          {deal.influencerSigned && (
-                            <button className="mini-action-btn legal-outline" onClick={() => setShowDocument({ type: 'agreement', deal })}>📄 Agreement</button>
-                          )}
-                          {deal.paymentDone && (
-                            <button className="mini-action-btn primary-outline" onClick={() => setShowDocument({ type: 'invoice', deal })}>🧾 Invoice</button>
-                          )}
+                        <button
+                          className="mini-action-btn legal"
+                          disabled={!deal.paymentDone || deal.influencerSigned}
+                          onClick={() => deal.paymentDone && !deal.influencerSigned && handleStartSigning(deal)}
+                        >
+                          Sign
+                        </button>
                         </div>
-                        {deal.status === 'closed' && (
-                          reviewedDeals[deal.id] ? (
-                            <div className="reviewed-badge">
-                              {Array.from({ length: 5 }, (_, i) => (
-                                <span key={i} className={i < reviewedDeals[deal.id] ? 'rstar filled' : 'rstar'}>★</span>
-                              ))}
-                              <span className="reviewed-label">Reviewed</span>
-                            </div>
-                          ) : (
-                            <button
-                              className="mini-action-btn review"
-                              onClick={() => {
-                                setReviewDeal(deal);
-                                setShowReviewModal(true);
-                              }}
-                            >
-                              ⭐ Review
-                            </button>
-                          )
+                      <div className="pipeline-main-actions">
+                        <button
+                          className="mini-action-btn legal-outline"
+                          disabled={!deal.influencerSigned}
+                          onClick={() => deal.influencerSigned && setShowDocument({ type: "agreement", deal })}
+                        >
+                          Agreement
+                        </button>
+                        <button
+                          className="mini-action-btn primary-outline"
+                          disabled={!deal.paymentDone}
+                          onClick={() => deal.paymentDone && setShowDocument({ type: "invoice", deal })}
+                        >
+                          Invoice
+                        </button>
+                        {reviewedDeals[deal.id] ? (
+                          <div className="reviewed-badge">
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <span key={i} className={i < reviewedDeals[deal.id] ? "rstar filled" : "rstar"}>*</span>
+                            ))}
+                            <span className="reviewed-label">Reviewed</span>
+                          </div>
+                        ) : (
+                          <button
+                            className="mini-action-btn review"
+                            disabled={deal.status !== "closed"}
+                            onClick={() => {
+                              if (deal.status !== "closed") return;
+                              setReviewDeal(deal);
+                              setShowReviewModal(true);
+                            }}
+                          >
+                            Review
+                          </button>
                         )}
-                        <button className="mini-action-btn chat" onClick={() => setActiveDealChat(deal)}>💬 Chat</button>
+                        <button className="mini-action-btn chat" onClick={() => setActiveDealChat(deal)}>Chat</button>
                       </div>
                     </div>
                   </DealCard>
@@ -285,14 +333,14 @@ const InfluencerDashboard = () => {
                     <h3 className="campaign-card-title">{camp.title}</h3>
                     <p className="campaign-card-desc">{camp.description}</p>
                     <div className="campaign-meta-info">
-                      <div className="meta-item"><span>💰</span> {formatCurrency(camp.budget)}</div>
-                      <div className="meta-item"><span>📦</span> {camp.deliverables}</div>
+                      <div className="meta-item"><span>ðŸ’°</span> {formatCurrency(camp.budget)}</div>
+                      <div className="meta-item"><span>ðŸ“¦</span> {camp.deliverables}</div>
                     </div>
                     <div className="marketplace-actions-row">
                       {isApplied ? (
                         <button className="applied-pill-btn" disabled>Already Applied</button>
                       ) : (
-                        <button className="accept-pill-btn" onClick={() => handleApply(camp)} disabled={isSubmitting}>
+                        <button className="accept-pill-btn" onClick={() => handleOpenApplyDialog(camp)} disabled={isSubmitting}>
                           {isSubmitting ? "Processing..." : "Apply Now"}
                         </button>
                       )}
@@ -334,8 +382,35 @@ const InfluencerDashboard = () => {
             onClose={() => setShowDocument(null)} 
         />
       )}
+      {showApplyDialog && (
+        <div className="proposal-modal-overlay" onClick={() => setShowApplyDialog(false)}>
+          <div className="proposal-modal-card compact" onClick={(e) => e.stopPropagation()}>
+            <div className="proposal-modal-icon">{"\uD83E\uDD1D"}</div>
+            <h3 className="proposal-modal-title">Apply to Campaign?</h3>
+            <p className="proposal-modal-desc">
+              You are applying for <strong>{pendingCampaign?.title}</strong>
+              {pendingCampaign?.platform_required ? ` on ${pendingCampaign.platform_required}` : ""}.
+            </p>
+            <div className="proposal-modal-actions">
+              <button className="proposal-cancel-btn" onClick={() => setShowApplyDialog(false)}>Cancel</button>
+              <button className="proposal-confirm-btn" onClick={confirmApplyCampaign} disabled={isSubmitting}>
+                {isSubmitting ? "Sending..." : "Send Proposal"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default InfluencerDashboard;
+
+
+
+
+
+
+
+
+

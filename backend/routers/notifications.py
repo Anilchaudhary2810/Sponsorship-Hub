@@ -74,23 +74,20 @@ def mark_all_notifications_as_read(
 
 @ws_router.websocket("/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
-    from ..auth import decode_token_sub
     from jose import JWTError
 
-    token = websocket.cookies.get("access_token")
-    if not token:
-        token = websocket.query_params.get("token")
+    token = auth.get_ws_access_token(websocket)
 
     if not token:
         await _safe_ws_close(websocket, status.WS_1008_POLICY_VIOLATION)
         return
         
     try:
-        token_user_id = decode_token_sub(token, expected_type="access")
+        token_user_id = auth.decode_token_sub(token, expected_type="access")
         if int(token_user_id) != int(user_id):
             await _safe_ws_close(websocket, status.WS_1008_POLICY_VIOLATION)
             return
-    except (JWTError, ValueError):
+    except (JWTError, auth.AuthenticationError, ValueError):
         await _safe_ws_close(websocket, status.WS_1008_POLICY_VIOLATION)
         return
 

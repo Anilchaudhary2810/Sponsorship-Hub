@@ -4,6 +4,9 @@ Auth flow tests – covers email verification and password reset flows.
 import pytest
 import secrets
 from datetime import datetime, timedelta
+import importlib
+from urllib.parse import parse_qs, urlparse
+from backend.auth import hash_token
 
 
 # ---------------------------------------------------------------------------
@@ -78,16 +81,43 @@ def test_password_reset_request_invalid_email_format(client):
     assert res.status_code == 422
 
 
+def test_password_reset_request_sends_email_with_raw_token_link(client, db, test_user, monkeypatch):
+    """Known-email reset request should wire delivery using a link with raw token."""
+    auth_router_module = importlib.import_module("backend.routers.auth_router")
+
+    captured: dict[str, str] = {}
+
+    def _fake_send_password_reset_email(*, to_email: str, reset_link: str, expires_minutes: int = 60):
+        captured["to_email"] = to_email
+        captured["reset_link"] = reset_link
+        captured["expires_minutes"] = str(expires_minutes)
+
+    monkeypatch.setattr(auth_router_module, "_should_send_password_reset_email", lambda: True)
+    monkeypatch.setattr(auth_router_module, "send_password_reset_email", _fake_send_password_reset_email)
+
+    res = client.post("/auth/request-password-reset", json={"email": test_user.email})
+    assert res.status_code == 200
+    assert captured.get("to_email") == test_user.email
+    assert "reset-password?token=" in captured.get("reset_link", "")
+
+    token_from_link = parse_qs(urlparse(captured["reset_link"]).query).get("token", [""])[0]
+    assert token_from_link
+
+    db.refresh(test_user)
+    assert test_user.reset_password_token == hash_token(token_from_link)
+
+
 def test_password_reset_flow_success(client, db, test_user):
     """Full happy-path: request → reset → login with new password."""
     # 1. Request reset
     res = client.post("/auth/request-password-reset", json={"email": test_user.email})
     assert res.status_code == 200
 
-    # Retrieve token from DB (simulating email receipt)
-    db.refresh(test_user)
-    token = test_user.reset_password_token
-    assert token is not None
+    # Simulate email-issued raw token while DB stores only its hash.
+    token = secrets.token_urlsafe(32)
+    test_user.reset_password_token = hash_token(token)
+    test_user.reset_password_expires_at = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
 
     # 2. Reset password
     res = client.post(
@@ -118,7 +148,7 @@ def test_password_reset_invalid_token(client):
 def test_expired_password_reset_token(client, db, test_user):
     """An expired reset token is rejected."""
     token = secrets.token_urlsafe(32)
-    test_user.reset_password_token = token
+    test_user.reset_password_token = hash_token(token)
     test_user.reset_password_expires_at = datetime.utcnow() - timedelta(minutes=1)
     db.commit()
 
@@ -132,9 +162,10 @@ def test_expired_password_reset_token(client, db, test_user):
 
 def test_password_reset_clears_token(client, db, test_user):
     """After a successful reset, the reset token is cleared from the DB."""
-    client.post("/auth/request-password-reset", json={"email": test_user.email})
-    db.refresh(test_user)
-    token = test_user.reset_password_token
+    token = secrets.token_urlsafe(32)
+    test_user.reset_password_token = hash_token(token)
+    test_user.reset_password_expires_at = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
 
     client.post(
         "/auth/reset-password",
@@ -148,9 +179,10 @@ def test_password_reset_clears_token(client, db, test_user):
 def test_password_reset_old_password_rejected_after_reset(client, db, test_user):
     """After a reset, the old password no longer works."""
     old_password = "Password123"
-    client.post("/auth/request-password-reset", json={"email": test_user.email})
-    db.refresh(test_user)
-    token = test_user.reset_password_token
+    token = secrets.token_urlsafe(32)
+    test_user.reset_password_token = hash_token(token)
+    test_user.reset_password_expires_at = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
 
     client.post(
         "/auth/reset-password",
@@ -162,3 +194,40 @@ def test_password_reset_old_password_rejected_after_reset(client, db, test_user)
         json={"email": test_user.email, "password": old_password}
     )
     assert res.status_code == 401
+
+
+def test_password_reset_rejects_stored_hash_as_token(client, db, test_user):
+    """Regression: stored hash value must not be usable as reset token input."""
+    raw_token = secrets.token_urlsafe(32)
+    stored_hash = hash_token(raw_token)
+    test_user.reset_password_token = stored_hash
+    test_user.reset_password_expires_at = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
+
+    res = client.post(
+        "/auth/reset-password",
+        json={"token": stored_hash, "new_password": "NoBypass123!"}
+    )
+    assert res.status_code == 400
+    assert "Invalid or expired" in res.json()["message"]
+
+
+def test_password_reset_token_is_single_use(client, db, test_user):
+    """A reset token can only be used once."""
+    token = secrets.token_urlsafe(32)
+    test_user.reset_password_token = hash_token(token)
+    test_user.reset_password_expires_at = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
+
+    first = client.post(
+        "/auth/reset-password",
+        json={"token": token, "new_password": "SingleUse123!"}
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        "/auth/reset-password",
+        json={"token": token, "new_password": "SingleUse456!"}
+    )
+    assert second.status_code == 400
+    assert "Invalid or expired" in second.json()["message"]

@@ -82,7 +82,10 @@ class RealtimeBus:
         if not self.enabled or not self.redis:
             return
         try:
-            await self.redis.publish(channel, json.dumps(payload))
+            await asyncio.wait_for(
+                self.redis.publish(channel, json.dumps(payload)),
+                timeout=1.0,
+            )
         except Exception as exc:
             logger.warning(f"Realtime publish failed on channel '{channel}': {exc}")
 

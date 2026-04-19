@@ -302,3 +302,26 @@ def test_delete_deal_unauthenticated(client, created_deal):
     deal_id = created_deal["id"]
     response = client.delete(f"/deals/{deal_id}")
     assert response.status_code == 401
+
+
+def test_manual_payment_endpoint_disabled(client, db, created_deal, sponsor_headers):
+    """Manual payment path is disabled to prevent client-side payment bypass."""
+    from backend.models import Deal
+
+    deal_id = created_deal["id"]
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    assert deal is not None
+    deal.status = "payment_pending"
+    db.commit()
+
+    response = client.put(
+        f"/deals/{deal_id}/payment",
+        json={"amount": 1, "currency": "USD", "payment_by": "sponsor"},
+        headers=sponsor_headers,
+    )
+    assert response.status_code == 410
+    assert "disabled" in str(response.json().get("detail", "")).lower()
+    db.refresh(deal)
+    assert float(deal.payment_amount) == 0.0
+    assert deal.payment_done is False
+    assert deal.status == "payment_pending"

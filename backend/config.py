@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     SMTP_USER: Optional[str] = None
     SMTP_PASS: Optional[str] = None
     SMTP_FROM: str = "noreply@sponsorship.com"
+    SMTP_USE_TLS: bool = False
+    SMTP_TIMEOUT_SECONDS: int = 10
+
+    # Frontend URL used to compose reset/verification links in emails
+    FRONTEND_BASE_URL: str = "http://localhost:5173"
     
 
     # CORS — must list explicit origins when allow_credentials=True (wildcard is invalid)

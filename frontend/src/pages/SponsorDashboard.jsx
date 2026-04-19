@@ -13,13 +13,15 @@ import AnalyticsPanel from "../components/AnalyticsPanel";
 import { formatCurrency } from "../utils/formatCurrency";
 import { mapEventData, mapDealData } from "../utils/mapping";
 import EventDetailModal from "../components/EventDetailModal";
+import QuickActionsBar from "../components/QuickActionsBar";
 import { INDIAN_STATES } from "../utils/constants";
 import "./SponsorDashboard.css";
 import {
   acceptDeal,
   fetchEvents,
   fetchDeals,
-  markPaymentDone,
+  createPaymentOrder,
+  fetchPaymentCheckoutConfig,
   signDeal as signDealFn,
   createDeal,
   createReview,
@@ -28,8 +30,34 @@ import {
   createCampaign,
   getAvailableInfluencers,
 } from "../services/api";
-import { getAccessToken } from "../api/api";
 import ReviewModal from "../components/ReviewModal";
+
+const loadRazorpaySdk = () =>
+  new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("Window not available"));
+      return;
+    }
+    if (window.Razorpay) {
+      resolve(window.Razorpay);
+      return;
+    }
+
+    const existing = document.getElementById("razorpay-checkout-sdk");
+    if (existing) {
+      existing.addEventListener("load", () => resolve(window.Razorpay));
+      existing.addEventListener("error", () => reject(new Error("Failed to load Razorpay SDK")));
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "razorpay-checkout-sdk";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(window.Razorpay);
+    script.onerror = () => reject(new Error("Failed to load Razorpay SDK"));
+    document.body.appendChild(script);
+  });
 
 const SponsorDashboard = () => {
   const navigate = useNavigate();
@@ -58,7 +86,7 @@ const SponsorDashboard = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewedDeals, setReviewedDeals] = useState({}); // { dealId: rating }
   const [selectedEventDetails, setSelectedEventDetails] = useState(null);
-  const [showDocument, setShowDocument] = useState(null); // { type: 'agreement'|'invoice', deal }
+  const [showDocument, setShowDocument] = useState(null); // { type: 'agreement'|'invoice', deal }
 
   const [currentUser] = useState(() => JSON.parse(localStorage.getItem("currentUser") || "{}"));
 
@@ -71,9 +99,6 @@ const SponsorDashboard = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   const loadData = async () => {
-    // Only proceed if we have a token
-    if (!getAccessToken()) return;
-
     try {
       // Pass the selected state filter to the API for better efficiency
       const eventParams = selectedState !== "All States" ? { state: selectedState } : {};
@@ -88,10 +113,9 @@ const SponsorDashboard = () => {
       setEvents(eventsResp.data.map(mapEventData));
       
       const mine = dealsResp.data.filter(d => Number(d.sponsor_id) === Number(currentUser.id));
-      setDeals(mine.map(d => mapDealData(d, currentUser)));
+      setDeals(mine.map((d) => mapDealData(d, currentUser)));
 
       setInfluencers(influencersResp
-        .filter(u => !u.full_name?.toLowerCase().includes("test") && !u.email?.toLowerCase().includes("test"))
         .map(u => ({
           id: u.id,
           name: u.full_name,
@@ -102,7 +126,7 @@ const SponsorDashboard = () => {
           avatar: u.instagram_handle ? `https://unavatar.io/instagram/${u.instagram_handle}` : null
         })));
 
-      setMyCampaigns(campaignsResp.data.filter(c => Number(c.creator_id) === Number(currentUser.id)));
+      setMyCampaigns(campaignsResp.data.filter((c) => Number(c.creator_id) === Number(currentUser.id)));
 
       // Load past reviews so stars persist across page refreshes
       try {
@@ -114,6 +138,7 @@ const SponsorDashboard = () => {
         });
         setReviewedDeals(prev => ({ ...prev, ...map }));
       } catch {}
+
     } catch {}
   };
 
@@ -139,7 +164,7 @@ const SponsorDashboard = () => {
   const refreshDeals = async () => {
     const resp = await fetchDeals();
     const mine = resp.data.filter(d => Number(d.sponsor_id) === Number(currentUser.id));
-    setDeals(mine.map(d => mapDealData(d, currentUser)));
+    setDeals(mine.map((d) => mapDealData(d, currentUser)));
   };
 
   const handleDealAction = async (dealId, actionFn, payload) => {
@@ -162,22 +187,78 @@ const SponsorDashboard = () => {
   const [showAgreementModal, setShowAgreementModal] = useState(false);
 
   const handleStartPayment = (deal) => { 
-    // If the deal has no amount yet, try to use the event budget as a suggestion
-    let suggestedAmount = Number(deal.paymentAmount);
-    if (suggestedAmount === 0) {
-      if (deal.event) {
-        suggestedAmount = Number(deal.event.raw_budget);
-      } else if (deal.campaign) {
-        suggestedAmount = Number(deal.campaign.budget);
-      }
+    // Always trust server-provided deal amount only.
+    const serverAmount = Number(deal.paymentAmount);
+    if (!Number.isFinite(serverAmount) || serverAmount <= 0) {
+      toast.error("Deal amount is not configured yet. Please refresh or contact support.");
+      return;
     }
-    
-    setPaymentDeal({ ...deal, paymentAmount: suggestedAmount }); 
+
+    setPaymentDeal({ ...deal, paymentAmount: serverAmount }); 
     setShowPaymentModal(true); 
   };
-  const handlePaymentSuccess = async (pay) => {
-    await handleDealAction(paymentDeal.id, markPaymentDone, { ...pay, payment_by: "sponsor" });
-    setShowPaymentModal(false);
+  const handlePaymentSuccess = async (_pay) => {
+    if (!paymentDeal?.id) return;
+    setIsSubmitting(true);
+    try {
+      const [orderResp, configResp] = await Promise.all([
+        createPaymentOrder(paymentDeal.id),
+        fetchPaymentCheckoutConfig(),
+      ]);
+
+      const orderData = orderResp?.data || {};
+      const orderId = orderData.razorpay_payment_id;
+      const keyId = configResp?.data?.key_id;
+      const amountPaise = Math.round(Number(orderData.payment_amount || paymentDeal.paymentAmount || 0) * 100);
+      const currency = orderData.currency || paymentDeal.currency || "INR";
+
+      if (!orderId || !keyId || amountPaise <= 0) {
+        toast.error("Unable to start gateway checkout. Please verify payment configuration.");
+        return;
+      }
+
+      await loadRazorpaySdk();
+      if (!window.Razorpay) {
+        toast.error("Payment SDK unavailable. Please try again.");
+        return;
+      }
+
+      setShowPaymentModal(false);
+
+      const rzp = new window.Razorpay({
+        key: keyId,
+        amount: amountPaise,
+        currency,
+        order_id: orderId,
+        name: "Sponsorship Hub",
+        description: `Deal #${orderData.id || paymentDeal.id} checkout`,
+        handler: async () => {
+          toast.success("Payment authorized. Waiting for secure webhook confirmation.");
+          await refreshDeals();
+        },
+        modal: {
+          ondismiss: () => {
+            toast("Checkout closed. You can retry payment anytime.");
+          },
+        },
+        prefill: {
+          name: currentUser.full_name || "",
+          email: currentUser.email || "",
+        },
+        theme: { color: "#5b4bff" },
+      });
+
+      rzp.on("payment.failed", () => {
+        toast.error("Payment failed. Please try again.");
+      });
+      rzp.open();
+
+      toast.success("Order created. Complete payment in the gateway popup.");
+    } catch {
+      toast.error("Unable to start payment checkout");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleStartSigning = (deal) => {
@@ -200,7 +281,7 @@ const SponsorDashboard = () => {
       setReviewedDeals(prev => ({ ...prev, [reviewDeal.id]: reviewData.rating }));
       setShowReviewModal(false);
       setReviewDeal(null);
-      toast.success("⭐ Review submitted! Thank you for your feedback.");
+      toast.success("Review submitted! Thank you for your feedback.");
       loadData();
     } catch {}
   };
@@ -249,7 +330,6 @@ const SponsorDashboard = () => {
   const [proposeInfluencer, setProposeInfluencer] = useState(null);
   const [showInfluencerDialog, setShowInfluencerDialog] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
-
   const confirmInfluencerProposal = async () => {
     if (!selectedCampaignId || !proposeInfluencer) return;
     setIsSubmitting(true);
@@ -311,6 +391,40 @@ const SponsorDashboard = () => {
     }
   ];
 
+  const getDealPartnerName = (deal) => {
+    if (deal.deal_type === "sponsorship") return deal.organizerName || "Organizer";
+    return deal.influencer?.full_name || deal.influencerName || "Creator";
+  };
+
+  const getDealSubject = (deal) => {
+    if (deal.deal_type === "sponsorship") return deal.event?.title || "Event partnership";
+    return deal.campaign?.title || "Creator campaign";
+  };
+
+  const getDealSubline = (deal) => {
+    if (deal.deal_type === "sponsorship") {
+      const city = deal.event?.city || deal.event?.location || "Location TBD";
+      return `${city} - Event Sponsorship`;
+    }
+    const platform = deal.campaign?.platform_required || "Multi-platform";
+    return `${platform} - Creator Promotion`;
+  };
+
+  const quickActions = [
+    {
+      key: "new",
+      label: activePipeline === "influencers" ? "New Campaign" : "State Filter",
+      tone: "primary",
+      onClick: () => {
+        if (activePipeline === "influencers") setIsCreateCampaignOpen(true);
+        else setShowFilters((prev) => !prev);
+      },
+    },
+    { key: "ops", label: "Scale Ops", tone: "emphasis", onClick: () => navigate("/scale-ops") },
+    { key: "analytics", label: "Analytics", onClick: () => navigate("/analytics") },
+    { key: "profile", label: "Profile", onClick: () => navigate("/my-profile") },
+  ];
+
   return (
     <div>
       <Navbar role="sponsor" />
@@ -320,7 +434,7 @@ const SponsorDashboard = () => {
             <div className="title-action-row">
               <h1 className="sponsor-title">Sponsor Dashboard</h1>
               <button className="analytics-nav-btn" onClick={() => navigate('/analytics')}>
-                📊 Analytics
+                Analytics
               </button>
             </div>
             <p className="subtitle">Manage event sponsorships and creator campaigns from one place.</p>
@@ -328,17 +442,17 @@ const SponsorDashboard = () => {
           <div className="pipeline-switcher-container">
             <div className="pipeline-tabs">
               <button className={`pipeline-tab-btn ${activePipeline === 'events' ? 'active' : ''}`} onClick={() => setActivePipeline('events')}>
-                🏟️ Event Sponsorships
+                Event Sponsorships
               </button>
               <button className={`pipeline-tab-btn ${activePipeline === 'influencers' ? 'active' : ''}`} onClick={() => setActivePipeline('influencers')}>
-                🤳 Creator Marketing
+                Creator Marketing
               </button>
             </div>
           </div>
           <div className="header-actions">
             {activePipeline === 'influencers' && (
               <button className="create-primary-btn" onClick={() => setIsCreateCampaignOpen(true)}>
-                📣 New Campaign
+                New Campaign
               </button>
             )}
             {activePipeline === 'events' && (
@@ -356,7 +470,7 @@ const SponsorDashboard = () => {
             <div className="create-event-card-horizontal">
               <header className="form-header-compact">
                 <h2>Launch New Campaign</h2>
-                <button className="close-form-btn" onClick={() => setIsCreateCampaignOpen(false)}>✕</button>
+                <button className="close-form-btn" onClick={() => setIsCreateCampaignOpen(false)}>X</button>
               </header>
               <form className="horizontal-event-form" onSubmit={handleCreateCampaign}>
                 <div className="form-grid">
@@ -397,6 +511,7 @@ const SponsorDashboard = () => {
         )}
 
         <DashboardStats stats={stats} />
+        <QuickActionsBar actions={quickActions} />
 
         <div className="horizontal-sections-stack">
           {/* Active Deals Section (Universal) */}
@@ -413,6 +528,9 @@ const SponsorDashboard = () => {
                 }).filter(d => d.status !== 'rejected').map(deal => (
                   <DealCard key={deal.id} deal={deal}>
                     <div className="deal-card-content-wide">
+                      <div className="deal-type-chip">
+                        {deal.deal_type === "sponsorship" ? "Event Deal" : "Creator Deal"}
+                      </div>
                       <h4 className="deal-organizer-name">
                         {deal.deal_type === 'sponsorship' ? (
                           <span
@@ -420,7 +538,7 @@ const SponsorDashboard = () => {
                             onClick={() => navigate(`/profile/${deal.organizer_id}`)}
                             title="View Profile"
                           >
-                            {deal.organizerName}
+                            {getDealPartnerName(deal)}
                           </span>
                         ) : (
                           <span
@@ -428,14 +546,22 @@ const SponsorDashboard = () => {
                             onClick={() => navigate(`/profile/${deal.influencer_id}`)}
                             title="View Profile"
                           >
-                            {deal.influencer?.full_name || 'Creator'}
+                            {getDealPartnerName(deal)}
                           </span>
                         )}
                       </h4>
+                      <p className="deal-subject-line">{getDealSubject(deal)}</p>
+                      <p className="deal-context-line">{getDealSubline(deal)}</p>
+                      <div className="deal-meta-row">
+                        <span className="deal-meta-item">
+                          Value: {formatCurrency(Number(deal.paymentAmount) || Number(deal.event?.raw_budget) || Number(deal.campaign?.budget) || 0)}
+                        </span>
+                        <span className="deal-meta-item">ID: #{deal.id}</span>
+                      </div>
                       <div className="status-grid">
                         <span className={`status-pill ${deal.status}`}>{deal.status}</span>
                         <span className={`status-item ${deal.paymentDone ? 'done' : 'pending'}`}>
-                          {deal.paymentDone ? '✅ Paid' : '⏳ Pending'}
+                          {deal.paymentDone ? "Paid" : "Payment Pending"}
                         </span>
                       </div>
                       <div className="deal-actions-row">
@@ -448,14 +574,20 @@ const SponsorDashboard = () => {
                         {deal.status === "payment_pending" && !deal.paymentDone && (
                           <button className="mini-action-btn payment" onClick={() => handleStartPayment(deal)}>Pay</button>
                         )}
-                        {deal.paymentDone && !deal.sponsorSigned && <button className="mini-action-btn legal" onClick={() => handleStartSigning(deal)}>Sign</button>}
+                        <button
+                          className="mini-action-btn legal"
+                          disabled={!deal.paymentDone || deal.sponsorSigned}
+                          onClick={() => deal.paymentDone && !deal.sponsorSigned && handleStartSigning(deal)}
+                        >
+                          Sign
+                        </button>
                         
                         <div className="doc-buttons-group">
                             {deal.sponsorSigned && (
-                                <button className="mini-action-btn legal-outline" onClick={() => setShowDocument({ type: 'agreement', deal })}>📄 Agreement</button>
+                                <button className="mini-action-btn legal-outline" onClick={() => setShowDocument({ type: 'agreement', deal })}>Agreement</button>
                             )}
                             {deal.paymentDone && (
-                                <button className="mini-action-btn primary-outline" onClick={() => setShowDocument({ type: 'invoice', deal })}>🧾 Invoice</button>
+                                <button className="mini-action-btn primary-outline" onClick={() => setShowDocument({ type: 'invoice', deal })}>Invoice</button>
                             )}
                         </div>
 
@@ -463,7 +595,7 @@ const SponsorDashboard = () => {
                           reviewedDeals[deal.id] ? (
                             <div className="reviewed-badge">
                               {Array.from({ length: 5 }, (_, i) => (
-                                <span key={i} className={i < reviewedDeals[deal.id] ? 'rstar filled' : 'rstar'}>★</span>
+                                <span key={i} className={i < reviewedDeals[deal.id] ? 'rstar filled' : 'rstar'}>*</span>
                               ))}
                               <span className="reviewed-label">Reviewed</span>
                             </div>
@@ -475,11 +607,13 @@ const SponsorDashboard = () => {
                                 setShowReviewModal(true);
                               }}
                             >
-                              ⭐ Review
+                              Review
                             </button>
                           )
                         )}
-                        <button className="mini-action-btn chat" onClick={() => setActiveDealChat(deal)}>Chat</button>
+                        <button className="mini-action-btn chat" onClick={() => setActiveDealChat(deal)}>
+                          Chat with {deal.deal_type === "sponsorship" ? "Organizer" : "Creator"}
+                        </button>
                       </div>
                     </div>
                   </DealCard>
@@ -564,12 +698,12 @@ const SponsorDashboard = () => {
                       <div className="event-badge">{event.category || 'Global Event'}</div>
                       <h3 className="event-card-title">{event.title}</h3>
                       <div className="event-meta-info">
-                        <p className="meta-item">📍 {event.city}</p>
-                        <p className="meta-item price-tag">💰 {formatCurrency(event.budget)}</p>
+                        <p className="meta-item">Location: {event.city}</p>
+                        <p className="meta-item price-tag">Budget: {formatCurrency(event.budget)}</p>
                       </div>
                       <div className="marketplace-actions-row">
                         {deal ? (
-                          <button className="chat-secondary-btn" onClick={(e) => { e.stopPropagation(); setActiveDealChat(deal); }}>💬 Chat</button>
+                          <button className="chat-secondary-btn" onClick={(e) => { e.stopPropagation(); setActiveDealChat(deal); }}>Chat</button>
                         ) : (
                           <button className="accept-pill-btn" onClick={(e) => { e.stopPropagation(); handleProposeDeal(event); }}>Propose Deal</button>
                         )}
@@ -604,14 +738,23 @@ const SponsorDashboard = () => {
                       <h3 className="creator-name">{inf.name}</h3>
                       <p className="creator-niche">{inf.niche}</p>
                       <div className="creator-stats-mini">
-                        <span>👥 {inf.audience.toLocaleString()}</span>
-                        <span>📱 {inf.platforms}</span>
+                        <span>Audience: {inf.audience.toLocaleString()}</span>
+                        <span>Platform: {inf.platforms}</span>
                       </div>
                       <div className="marketplace-actions-row">
                         {deal ? (
-                          <button className="chat-secondary-btn" onClick={() => setActiveDealChat(deal)}>💬 Chat</button>
+                          <button className="chat-secondary-btn" onClick={() => setActiveDealChat(deal)}>Chat</button>
                         ) : (
-                          <button className="accept-pill-btn" onClick={() => { setProposeInfluencer(inf); setShowInfluencerDialog(true); }}>Work Together</button>
+                          <button
+                            className="accept-pill-btn"
+                            onClick={() => {
+                              setSelectedCampaignId("");
+                              setProposeInfluencer(inf);
+                              setShowInfluencerDialog(true);
+                            }}
+                          >
+                            Work Together
+                          </button>
                         )}
                       </div>
                     </div>
@@ -638,7 +781,14 @@ const SponsorDashboard = () => {
 
       {showPaymentModal && <PaymentModal amount={paymentDeal.paymentAmount} currency={paymentDeal.currency} onSuccess={handlePaymentSuccess} onClose={() => setShowPaymentModal(false)} />}
       {showAgreementModal && <AgreementModal deal={signDeal} role="sponsor" onSign={handleSignSuccess} onClose={() => setShowAgreementModal(false)} />}
-      {activeDealChat && <ChatBox role="sponsor" title={`Chat: ${activeDealChat.organizerName}`} chatKey={`deal_${activeDealChat.id}`} onClose={() => setActiveDealChat(null)} />}
+      {activeDealChat && (
+        <ChatBox
+          role="sponsor"
+          title={`Chat: ${getDealPartnerName(activeDealChat)} - ${getDealSubject(activeDealChat)}`}
+          chatKey={`deal_${activeDealChat.id}`}
+          onClose={() => setActiveDealChat(null)}
+        />
+      )}
       {isRejectDialogOpen && (
         <div className="delete-dialog-overlay">
           <div className="delete-dialog">
@@ -646,36 +796,47 @@ const SponsorDashboard = () => {
             <p className="dialog-desc">This event will be hidden from your marketplace view. You can see it again in your next session.</p>
             <div className="delete-dialog-actions">
               <button className="delete-cancel-btn" onClick={() => setIsRejectDialogOpen(false)}>Cancel</button>
-              <button className="delete-confirm-btn" onClick={() => { setHiddenEventIds([...hiddenEventIds, eventToReject]); setIsRejectDialogOpen(false); }}>Yes, Ignore</button>
+              <button
+                className="delete-confirm-btn"
+                onClick={() => {
+                  if (itemToReject !== null) {
+                    setHiddenEventIds([...hiddenEventIds, itemToReject]);
+                  }
+                  setItemToReject(null);
+                  setIsRejectDialogOpen(false);
+                }}
+              >
+                Yes, Ignore
+              </button>
             </div>
           </div>
         </div>
       )}
       {showInfluencerDialog && (
-        <div className="delete-dialog-overlay">
-          <div className="delete-dialog glass-morphism">
-            <div className="dialog-icon">🤳</div>
-            <h3 className="dialog-title">Partner with {proposeInfluencer?.name}</h3>
-            <p className="dialog-desc">Select one of your pulse-active campaigns to propose to this creator.</p>
+        <div className="proposal-modal-overlay" onClick={() => setShowInfluencerDialog(false)}>
+          <div className="proposal-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="proposal-modal-icon">{"\uD83E\uDD33"}</div>
+            <h3 className="proposal-modal-title">Partner with {proposeInfluencer?.name}</h3>
+            <p className="proposal-modal-desc">Select one of your active campaigns to propose to this creator.</p>
             <div className="campaign-selector-list">
               {myCampaigns.map(c => (
                 <div 
                   key={c.id} 
-                  className={`campaign-item ${selectedCampaignId === c.id ? 'active' : ''}`}
-                  onClick={() => setSelectedCampaignId(c.id)}
+                  className={`campaign-item ${selectedCampaignId === String(c.id) ? 'active' : ''}`}
+                  onClick={() => setSelectedCampaignId(String(c.id))}
                 >
                   <p className="campaign-name">{c.title}</p>
-                  <p className="campaign-meta">{c.deliverables} • {formatCurrency(c.budget)}</p>
+                  <p className="campaign-meta">{c.deliverables} Ã¢â‚¬Â¢ {formatCurrency(c.budget)}</p>
                 </div>
               ))}
               {myCampaigns.length === 0 && (
                 <p className="error-text">You need to launch a campaign first!</p>
               )}
             </div>
-            <div className="delete-dialog-actions">
-              <button className="delete-cancel-btn" onClick={() => setShowInfluencerDialog(false)}>Cancel</button>
+            <div className="proposal-modal-actions">
+              <button className="proposal-cancel-btn" onClick={() => setShowInfluencerDialog(false)}>Cancel</button>
               <button 
-                className="delete-confirm-btn proposal-btn" 
+                className="proposal-confirm-btn" 
                 onClick={confirmInfluencerProposal} 
                 disabled={!selectedCampaignId || isSubmitting}
               >
@@ -686,17 +847,17 @@ const SponsorDashboard = () => {
         </div>
       )}
       {showProposeDialog && (
-        <div className="delete-dialog-overlay">
-          <div className="delete-dialog glass-morphism">
-            <div className="dialog-icon">🤝</div>
-            <h3 className="dialog-title">Secure Partnership?</h3>
-            <p className="dialog-desc">
+        <div className="proposal-modal-overlay" onClick={() => setShowProposeDialog(false)}>
+          <div className="proposal-modal-card compact" onClick={(e) => e.stopPropagation()}>
+            <div className="proposal-modal-icon">{"\uD83E\uDD1D"}</div>
+            <h3 className="proposal-modal-title">Secure Partnership?</h3>
+            <p className="proposal-modal-desc">
               You are proposing a brand partnership for <strong>{proposeDealEvent?.title}</strong>. 
               The organizer will be notified immediately to review your interest.
             </p>
-            <div className="delete-dialog-actions">
-              <button className="delete-cancel-btn" onClick={() => setShowProposeDialog(false)}>Cancel</button>
-              <button className="delete-confirm-btn proposal-btn" onClick={confirmProposeDeal} disabled={isSubmitting}>
+            <div className="proposal-modal-actions">
+              <button className="proposal-cancel-btn" onClick={() => setShowProposeDialog(false)}>Cancel</button>
+              <button className="proposal-confirm-btn" onClick={confirmProposeDeal} disabled={isSubmitting}>
                 {isSubmitting ? "Sending..." : "Send Proposal"}
               </button>
             </div>
@@ -735,3 +896,4 @@ const SponsorDashboard = () => {
 };
 
 export default SponsorDashboard;
+

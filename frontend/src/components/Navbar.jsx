@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import "./Navbar.css";
-import { updateUser, fetchUserProfile, fetchMyBilling, logoutUser } from "../services/api";
-import { clearAccessToken } from "../api/api";
+import { updateUser, fetchUserProfile, fetchMyBilling, logoutUser, fetchTrustProfile, submitKyc } from "../services/api";
 import NotificationBell from "./NotificationBell";
 import { INDIAN_STATES } from "../utils/constants";
 
@@ -14,6 +14,13 @@ const Navbar = ({ role }) => {
   const [profileTab, setProfileTab] = useState("overview");
   const [myReviews, setMyReviews] = useState([]);
   const [billing, setBilling] = useState(null);
+  const [trustProfile, setTrustProfile] = useState(null);
+  const [kycSubmitting, setKycSubmitting] = useState(false);
+  const [kycForm, setKycForm] = useState({
+    document_type: "aadhaar",
+    document_number_masked: "",
+    document_url: "",
+  });
 
   const [theme, setTheme] = useState(() => localStorage.getItem("app-theme") || "dark");
 
@@ -34,6 +41,7 @@ const Navbar = ({ role }) => {
   };
 
   const profilePanelRef = useRef(null);
+  const logoutWrapRef = useRef(null);
 
   const [currentUser, setCurrentUser] = useState(() => {
     const raw = localStorage.getItem("currentUser");
@@ -90,11 +98,29 @@ const Navbar = ({ role }) => {
     };
   }, [showProfilePanel]);
 
+  useEffect(() => {
+    if (!showLogoutConfirm) return;
+
+    const handleClickOutside = (e) => {
+      if (logoutWrapRef.current && !logoutWrapRef.current.contains(e.target)) {
+        setShowLogoutConfirm(false);
+      }
+    };
+
+    const timerId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 60);
+
+    return () => {
+      clearTimeout(timerId);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showLogoutConfirm]);
+
   const handleLogout = async () => {
     try {
       await logoutUser();
     } catch {}
-    clearAccessToken();
     localStorage.removeItem("currentUser");
     navigate("/login");
   };
@@ -141,8 +167,41 @@ const Navbar = ({ role }) => {
         const billingResp = await fetchMyBilling();
         setBilling(billingResp.data || null);
       } catch {}
+      try {
+        const trustResp = await fetchTrustProfile();
+        setTrustProfile(trustResp.data || null);
+      } catch {}
     })();
   }, [showProfilePanel, userId]);
+
+  const handleKycInput = (e) => {
+    setKycForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmitKyc = async (e) => {
+    e.preventDefault();
+    if (!kycForm.document_number_masked.trim()) {
+      toast.error("Enter masked document number");
+      return;
+    }
+    setKycSubmitting(true);
+    try {
+      await submitKyc({
+        document_type: kycForm.document_type,
+        document_number_masked: kycForm.document_number_masked.trim(),
+        document_url: kycForm.document_url.trim() || null,
+      });
+      const trustResp = await fetchTrustProfile();
+      setTrustProfile(trustResp.data || null);
+      toast.success("KYC submitted for review");
+      setKycForm((prev) => ({ ...prev, document_number_masked: "", document_url: "" }));
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.response?.data?.detail || "KYC submission failed";
+      toast.error(msg);
+    } finally {
+      setKycSubmitting(false);
+    }
+  };
 
   const avgRating = myReviews.length
     ? (myReviews.reduce((s, r) => s + r.rating, 0) / myReviews.length).toFixed(1)
@@ -198,156 +257,14 @@ const Navbar = ({ role }) => {
         <div className="profile-wrap" ref={profilePanelRef}>
           <button
             className="profile-btn"
-            onClick={() => {
-              setShowProfilePanel(!showProfilePanel);
-              setIsProfileEditing(false);
-              setProfileTab("overview");
-            }}
+            onClick={() => navigate("/my-profile")}
           >
             <span className="user-icon">{(profile.fullName || "U").charAt(0).toUpperCase()}</span>
             <span className="profile-btn-label">{profile.fullName || "Profile"}</span>
           </button>
-
-          {showProfilePanel && (
-            <div className="profile-popover">
-              {!isProfileEditing ? (
-                <>
-                  <div className="popover-header">
-                    <div>
-                      <h4>My Profile</h4>
-                      <p className="popover-subtitle">Manage your profile and trust details.</p>
-                    </div>
-                    <button type="button" className="edit-icon-btn" onClick={() => setIsProfileEditing(true)}>
-                      Edit
-                    </button>
-                  </div>
-
-                  <div className="profile-tabs">
-                    <button
-                      type="button"
-                      className={`profile-tab-btn ${profileTab === "overview" ? "active" : ""}`}
-                      onClick={() => setProfileTab("overview")}
-                    >
-                      Profile
-                    </button>
-                    <button
-                      type="button"
-                      className={`profile-tab-btn ${profileTab === "reviews" ? "active" : ""}`}
-                      onClick={() => setProfileTab("reviews")}
-                    >
-                      Reviews ({myReviews.length})
-                    </button>
-                  </div>
-
-                  {profileTab === "overview" ? (
-                    <>
-                      <div className="profile-info-grid">
-                        <p><strong>Name:</strong> {profile.fullName || "-"}</p>
-                        <p><strong>Email:</strong> {profile.email || "-"}</p>
-                        <p><strong>Plan:</strong> {planName}</p>
-                        <p><strong>Phone:</strong> {profile.phone || "-"}</p>
-                        <p><strong>{roleLabel}:</strong> {roleValue}</p>
-                        <p><strong>Location:</strong> {profile.city || profile.state ? `${profile.city}, ${profile.state}` : "-"}</p>
-                      </div>
-
-                      <div className="profile-review-list compact">
-                        <h5>Trust Score</h5>
-                        <div className="trust-score-row">
-                          <div className="trust-stars-mini">{renderStars(avgRating)}</div>
-                          <span className="trust-score-num">{Number(avgRating).toFixed(1)} / 5.0</span>
-                          <span className="trust-review-count">({myReviews.length} review{myReviews.length !== 1 ? "s" : ""})</span>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="profile-review-list">
-                      <h5>Trust Score and Feedback</h5>
-                      <div className="trust-score-row">
-                        <div className="trust-stars-mini">{renderStars(avgRating)}</div>
-                        <span className="trust-score-num">{Number(avgRating).toFixed(1)} / 5.0</span>
-                        <span className="trust-review-count">({myReviews.length} review{myReviews.length !== 1 ? "s" : ""})</span>
-                      </div>
-
-                      {myReviews.length === 0 ? (
-                        <p className="no-reviews">No reviews received yet.</p>
-                      ) : (
-                        myReviews.slice(0, 5).map((review) => (
-                          <div key={review.id} className="profile-review-item">
-                            <div className="review-item-top">
-                              <span className="review-item-stars">
-                                {Array.from({ length: 5 }, (_, i) => (
-                                  <span key={i} style={{ color: i < review.rating ? "#fbbf24" : "rgba(255,255,255,0.15)", fontSize: 12 }}>*</span>
-                                ))}
-                              </span>
-                              <span className="review-item-by">{review.reviewer_name}</span>
-                            </div>
-                            {review.comment && <p className="review-item-comment">"{review.comment}"</p>}
-                          </div>
-                        ))
-                      )}
-
-                      <button type="button" className="profile-ghost-btn" onClick={() => navigate(`/profile/${userId}`)}>
-                        Open Full Public Profile
-                      </button>
-                    </div>
-                  )}
-
-                  <button type="button" className="profile-inline-btn" onClick={() => setIsProfileEditing(true)}>
-                    Modify Profile
-                  </button>
-                </>
-              ) : (
-                <form onSubmit={handleSaveProfile} className="profile-edit-form">
-                  <div className="popover-header edit">
-                    <div>
-                      <h4>Edit Profile</h4>
-                      <p className="popover-subtitle">Update details visible in your account.</p>
-                    </div>
-                  </div>
-
-                  <div className="form-scroll">
-                    <label>Full Name</label>
-                    <input type="text" name="fullName" value={profileForm.fullName} onChange={handleProfileChange} required />
-                    <label>Phone Number</label>
-                    <input type="text" name="phone" value={profileForm.phone} onChange={handleProfileChange} />
-
-                    {role === "sponsor" ? (
-                      <>
-                        <label>Company Name</label>
-                        <input type="text" name="companyName" value={profileForm.companyName} onChange={handleProfileChange} />
-                      </>
-                    ) : (
-                      <>
-                        <label>Organization Name</label>
-                        <input type="text" name="organizationName" value={profileForm.organizationName} onChange={handleProfileChange} />
-                      </>
-                    )}
-
-                    <label>State</label>
-                    <select name="state" value={profileForm.state} onChange={handleProfileChange}>
-                      <option value="">Select State</option>
-                      {INDIAN_STATES.filter((s) => s !== "All States").map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-
-                    <label>City</label>
-                    <input type="text" name="city" value={profileForm.city} onChange={handleProfileChange} />
-                    <label>About</label>
-                    <textarea name="about" value={profileForm.about} onChange={handleProfileChange} rows="3" />
-                  </div>
-
-                  <div className="profile-popover-actions">
-                    <button type="button" className="profile-cancel-btn" onClick={() => setIsProfileEditing(false)}>Cancel</button>
-                    <button type="submit" className="profile-save-btn">Save Changes</button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
         </div>
 
-        <div className="logout-wrap">
+        <div className="logout-wrap" ref={logoutWrapRef}>
           <button className="logout-btn" onClick={() => setShowLogoutConfirm(!showLogoutConfirm)}>
             Log out
           </button>

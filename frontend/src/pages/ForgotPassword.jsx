@@ -24,7 +24,10 @@ const ForgotPassword = () => {
       toast.success("Reset link sent! Please check your inbox (or console for demo).");
       setTimeout(() => navigate("/login"), 3000);
     } catch (err) {
-      console.error(err);
+      console.warn("Auth recovery request failed", {
+        status: err?.response?.status ?? null,
+        code: err?.code ?? null,
+      });
       if (err.response) {
         toast.error(err.response.data?.detail || "Could not process request");
       } else {

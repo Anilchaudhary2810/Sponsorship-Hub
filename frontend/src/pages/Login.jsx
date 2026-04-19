@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { loginUser } from "../services/api";
-import { setAccessToken } from "../api/api";
 import SplashScreen from "./SplashScreen";
 import "./Login.css";
 
@@ -63,11 +62,8 @@ const Login = () => {
     }
 
     try {
-      console.log("Attempting login for:", formData.email);
       const resp = await loginUser(formData);
-      const { user, access_token } = resp.data;
-
-      setAccessToken(access_token);
+      const { user } = resp.data;
       localStorage.setItem("currentUser", JSON.stringify(user));
       
       toast.success(`Welcome back, ${user.full_name}!`);
@@ -78,7 +74,10 @@ const Login = () => {
       else if (role === "influencer") navigate("/influencer-dashboard");
       else navigate("/login");
     } catch (err) {
-      console.error("Login error:", err);
+      console.warn("Login request failed", {
+        status: err?.response?.status ?? null,
+        code: err?.code ?? null,
+      });
       
       if (err.response) {
         // The server responded with a status code outside the 2xx range

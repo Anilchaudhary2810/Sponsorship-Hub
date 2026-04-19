@@ -257,7 +257,11 @@ def deal_payment_webhook(db: Session, deal_id: int, payment_id: str, status: str
     if deal.status not in ["payment_pending", "proposed"]: # proposed handling is a fallback for concurrent updates
         raise exceptions.BusinessLogicError(f"Payment received for deal in invalid state: {deal.status}")
 
-    deal.razorpay_payment_id = payment_id
+    existing_provider_ref = getattr(deal, "razorpay_payment_id", None)
+    # Preserve server-created provider order id once stored. If not present,
+    # fall back to webhook reference (order/payment id) for traceability.
+    if not (isinstance(existing_provider_ref, str) and existing_provider_ref):
+        deal.razorpay_payment_id = payment_id
     deal.payment_status = status
     
     if status == "succeeded":
@@ -278,9 +282,10 @@ def deal_payment(db: Session, deal_id: int, payment: schemas.DealPayment):
     if deal.status != "payment_pending":
         raise exceptions.BusinessLogicError(f"Cannot process payment for deal in {deal.status} state")
 
+    # Never trust client-provided payment amount/currency for settlement state.
+    # Settlement amount must remain the server-side deal value.
+    _ = payment
     deal.payment_done = True
-    deal.payment_amount = payment.amount
-    deal.currency = payment.currency
     deal.payment_timestamp = datetime.utcnow()
     deal.status = "signing_pending"
     

@@ -4,7 +4,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead
 } from '../services/api';
-import { getAccessToken } from '../api/api';
+import { WS_BASE_URL } from '../api/api';
 import './NotificationBell.css';
 
 const NotificationBell = () => {
@@ -46,13 +46,7 @@ const NotificationBell = () => {
       return;
     }
 
-    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
-    // Replace http/https with ws/wss dynamically
-    const wsBase = apiBase.replace(/^http/, "ws");
-    const token = getAccessToken();
-    const wsUrl = token
-      ? `${wsBase}/ws/notifications/${userId}?token=${encodeURIComponent(token)}`
-      : `${wsBase}/ws/notifications/${userId}`;
+    const wsUrl = `${WS_BASE_URL}/ws/notifications/${userId}`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 

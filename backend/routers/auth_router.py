@@ -1,5 +1,7 @@
 from datetime import timedelta, datetime
 import secrets
+import os
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, status, Request, Response, HTTPException
 from sqlalchemy.orm import Session
@@ -17,6 +19,7 @@ from ..auth import (
 from ..config import settings
 from ..logger import auth_logger, security_logger
 from ..core.audit import log_audit_event
+from ..core.email import send_password_reset_email
 from backend.core.limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -52,6 +55,23 @@ def _client_ip(request: Request) -> str:
 
 def _user_agent(request: Request) -> str:
     return request.headers.get("user-agent", "")
+
+
+def _should_send_password_reset_email() -> bool:
+    env_value = (settings.ENV or "").lower()
+    if env_value in {"test", "testing"}:
+        return False
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return False
+    return True
+
+
+def _build_password_reset_link(raw_token: str) -> str:
+    base = (settings.FRONTEND_BASE_URL or "").strip().rstrip("/")
+    if not base:
+        base = "http://localhost:5173"
+    token_q = quote(raw_token, safe="")
+    return f"{base}/reset-password?token={token_q}"
 
 
 def _set_auth_cookies(response: Response, access_token: str, refresh_token: str, csrf_token: str) -> None:
@@ -94,7 +114,7 @@ def _clear_auth_cookies(response: Response) -> None:
     response.delete_cookie("csrf_token", path="/")
 
 
-@router.post("/login", response_model=schemas.TokenResponse)
+@router.post("/login", response_model=schemas.AuthSessionResponse)
 @limiter.limit("5/minute")
 def login(request: Request, response: Response, data: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = crud.authenticate_user(db, data.email, data.password)
@@ -144,14 +164,13 @@ def login(request: Request, response: Response, data: schemas.LoginRequest, db: 
         user_agent=_user_agent(request),
     )
     return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": user,
+        "message": "Login successful",
     }
 
 
-@router.post("/refresh", response_model=schemas.TokenResponse)
+@router.post("/refresh", response_model=schemas.AuthSessionResponse)
 @limiter.limit("20/minute")
 def refresh_token(
     request: Request,
@@ -215,10 +234,9 @@ def refresh_token(
         )
 
         return {
-            "access_token": new_access,
-            "refresh_token": new_refresh,
             "token_type": "bearer",
             "user": user,
+            "message": "Session refreshed",
         }
     except JWTError:
         log_audit_event(
@@ -238,7 +256,7 @@ def refresh_token(
         raise exceptions.AuthenticationError("Invalid refresh token")
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=schemas.TokenResponse)
+@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=schemas.RegisterResponse)
 @limiter.limit("3/minute")
 def register(request: Request, response: Response, user: schemas.UserCreate, db: Session = Depends(get_db)):
     existing = crud.get_user_by_email(db, user.email)
@@ -255,17 +273,20 @@ def register(request: Request, response: Response, user: schemas.UserCreate, db:
 
     db_user = crud.create_user(db, user)
     user_id = _as_int(getattr(db_user, "id", 0))
+    verification_token = secrets.token_urlsafe(32)
 
-    crud.update_user(db, user_id, {"is_verified": True})
+    crud.update_user(
+        db,
+        user_id,
+        {
+            "is_verified": False,
+            "verification_token": verification_token,
+            "refresh_token": None,
+        },
+    )
     db.refresh(db_user)
 
-    access_token = create_access_token(data={"sub": str(user_id)})
-    refresh_token = create_refresh_token(data={"sub": str(user_id)})
-    csrf_token = secrets.token_urlsafe(32)
-    crud.update_user(db, user_id, {"refresh_token": hash_token(refresh_token)})
-    _set_auth_cookies(response, access_token, refresh_token, csrf_token)
-
-    auth_logger.info(f"New user registered and auto-verified: {user.email}")
+    auth_logger.info(f"New user registered: {user.email} (verification required)")
     log_audit_event(
         db,
         action="auth.register_success",
@@ -276,11 +297,14 @@ def register(request: Request, response: Response, user: schemas.UserCreate, db:
         user_agent=_user_agent(request),
     )
 
+    env_value = (settings.ENV or "").lower()
+    is_production = env_value in {"production", "prod"}
+
     return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
+        "message": "Registration successful. Please verify your email before logging in.",
         "user": db_user,
+        "requires_verification": True,
+        "verification_token_preview": None if is_production else verification_token,
     }
 
 
@@ -327,6 +351,17 @@ def request_password_reset(request: Request, data: schemas.PasswordResetRequest,
             "reset_password_token": hashed_reset,
             "reset_password_expires_at": expires_at,
         })
+        if _should_send_password_reset_email():
+            try:
+                reset_link = _build_password_reset_link(reset_token)
+                send_password_reset_email(
+                    to_email=_as_str(getattr(user, "email", ""), default=data.email),
+                    reset_link=reset_link,
+                    expires_minutes=60,
+                )
+            except Exception as exc:
+                # Do not leak delivery internals to clients; keep generic response.
+                auth_logger.warning(f"Password reset email delivery failed for user {user_id}: {exc}")
         auth_logger.info(f"Password reset requested for {data.email}.")
         log_audit_event(
             db,
@@ -346,8 +381,8 @@ def request_password_reset(request: Request, data: schemas.PasswordResetRequest,
 def reset_password(request: Request, data: schemas.PasswordResetConfirm, db: Session = Depends(get_db)):
     token_hash = hash_token(data.token)
     user = db.query(crud.models.User).filter(
-        (crud.models.User.reset_password_token == token_hash) |
-        (crud.models.User.reset_password_token == data.token),
+        # Security: compare only hashed token; never accept stored hash as input token.
+        crud.models.User.reset_password_token == token_hash,
         crud.models.User.reset_password_expires_at > datetime.utcnow()
     ).first()
 

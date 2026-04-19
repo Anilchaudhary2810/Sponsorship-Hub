@@ -76,6 +76,7 @@ class User(Base):
     deals_as_influencer = relationship("Deal", foreign_keys="Deal.influencer_id", back_populates="influencer")
     reviews_as_reviewer = relationship("DealReview", foreign_keys="DealReview.reviewer_id", back_populates="reviewer")
     reviews_as_target = relationship("DealReview", foreign_keys="DealReview.target_user_id", back_populates="target_user")
+    kyc_submissions = relationship("KYCSubmission", foreign_keys="KYCSubmission.user_id", back_populates="user", cascade="all, delete-orphan")
 
 
 class Campaign(Base):
@@ -257,4 +258,234 @@ class BillingEvent(Base):
     created_at = Column(DateTime, server_default=func.now(), index=True)
 
     user = relationship("User")
+
+
+class KYCSubmission(Base):
+    __tablename__ = "kyc_submissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    reviewer_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    document_type = Column(String(50), nullable=False, index=True)
+    document_number_masked = Column(String(50), nullable=False)
+    document_url = Column(String(500), nullable=True)
+
+    status = Column(String(20), default="pending", nullable=False, index=True)  # pending/approved/rejected
+    risk_score = Column(Integer, default=0, nullable=False)
+    risk_flags = Column(JSON, default=list)
+    review_note = Column(Text, nullable=True)
+
+    submitted_at = Column(DateTime, server_default=func.now(), index=True)
+    reviewed_at = Column(DateTime, nullable=True, index=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", foreign_keys=[user_id], back_populates="kyc_submissions")
+    reviewer = relationship("User", foreign_keys=[reviewer_id])
+
+
+class DealTemplate(Base):
+    __tablename__ = "deal_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(120), nullable=False)
+    description = Column(Text, nullable=True)
+    deal_type = Column(String(50), nullable=False, index=True)
+    terms_json = Column(JSON, default=dict)
+    is_default = Column(Boolean, default=False, nullable=False, index=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    owner = relationship("User")
+
+
+class DealApproval(Base):
+    __tablename__ = "deal_approvals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    deal_id = Column(Integer, ForeignKey("deals.id", ondelete="CASCADE"), nullable=False, index=True)
+    requested_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    approver_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    approver_role = Column(String(20), nullable=False, index=True)  # owner/manager/finance/viewer
+    status = Column(String(20), nullable=False, default="pending", index=True)  # pending/approved/rejected
+    note = Column(Text, nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+
+    deal = relationship("Deal")
+    requested_by = relationship("User", foreign_keys=[requested_by_user_id])
+    approver = relationship("User", foreign_keys=[approver_user_id])
+
+
+class NegotiationEntry(Base):
+    __tablename__ = "negotiation_entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    deal_id = Column(Integer, ForeignKey("deals.id", ondelete="CASCADE"), nullable=False, index=True)
+    actor_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    change_type = Column(String(40), nullable=False, default="comment", index=True)  # comment/counter_offer/term_update
+    message = Column(Text, nullable=True)
+    payload = Column(JSON, default=dict)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+
+    deal = relationship("Deal")
+    actor = relationship("User")
+
+
+class DealMilestone(Base):
+    __tablename__ = "deal_milestones"
+
+    id = Column(Integer, primary_key=True, index=True)
+    deal_id = Column(Integer, ForeignKey("deals.id", ondelete="CASCADE"), nullable=False, index=True)
+    sequence_no = Column(Integer, nullable=False, default=1)
+    title = Column(String(160), nullable=False)
+    description = Column(Text, nullable=True)
+    amount = Column(Numeric(12, 2), nullable=False, default=0)
+    due_date = Column(Date, nullable=True, index=True)
+    status = Column(String(30), nullable=False, default="planned", index=True)  # planned/funded/released/disputed
+    funded_at = Column(DateTime, nullable=True)
+    released_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    deal = relationship("Deal")
+
+    __table_args__ = (
+        UniqueConstraint("deal_id", "sequence_no", name="uix_milestone_sequence"),
+    )
+
+
+class DealDispute(Base):
+    __tablename__ = "deal_disputes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    deal_id = Column(Integer, ForeignKey("deals.id", ondelete="CASCADE"), nullable=False, index=True)
+    opened_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    reason = Column(String(200), nullable=False)
+    details = Column(Text, nullable=True)
+    status = Column(String(30), nullable=False, default="open", index=True)  # open/under_review/resolved/rejected
+    resolution_note = Column(Text, nullable=True)
+    settlement_amount = Column(Numeric(12, 2), nullable=True)
+    opened_at = Column(DateTime, server_default=func.now(), index=True)
+    resolved_at = Column(DateTime, nullable=True, index=True)
+
+    deal = relationship("Deal")
+    opened_by = relationship("User")
+
+
+class Workspace(Base):
+    __tablename__ = "workspaces"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(150), nullable=False)
+    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    owner = relationship("User", foreign_keys=[owner_user_id])
+    members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
+
+
+class WorkspaceMember(Base):
+    __tablename__ = "workspace_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String(20), nullable=False, default="viewer", index=True)  # owner/manager/finance/viewer
+    status = Column(String(20), nullable=False, default="active", index=True)  # invited/active/removed
+    invited_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+
+    workspace = relationship("Workspace", back_populates="members")
+    user = relationship("User", foreign_keys=[user_id])
+    invited_by = relationship("User", foreign_keys=[invited_by_user_id])
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "user_id", name="uix_workspace_member"),
+    )
+
+
+class WorkspaceResource(Base):
+    __tablename__ = "workspace_resources"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    resource_type = Column(String(40), nullable=False, index=True)  # event/campaign/deal/template/report
+    resource_id = Column(Integer, nullable=False, index=True)
+    added_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+
+    workspace = relationship("Workspace")
+    added_by = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "resource_type", "resource_id", name="uix_workspace_resource"),
+    )
+
+
+class LifecycleNudge(Base):
+    __tablename__ = "lifecycle_nudges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    nudge_type = Column(String(60), nullable=False, index=True)
+    title = Column(String(200), nullable=False)
+    message = Column(Text, nullable=False)
+    state = Column(String(20), nullable=False, default="pending", index=True)  # pending/sent/dismissed/done
+    due_at = Column(DateTime, nullable=True, index=True)
+    payload = Column(JSON, default=dict)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User")
+
+
+class ReportSnapshot(Base):
+    __tablename__ = "report_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    report_type = Column(String(40), nullable=False, index=True)  # roi/campaign_outcome/monthly_exec
+    period_key = Column(String(40), nullable=False, index=True)
+    data_json = Column(JSON, default=dict)
+    exported_format = Column(String(20), nullable=True)
+    generated_at = Column(DateTime, server_default=func.now(), index=True)
+
+    user = relationship("User")
+
+
+class IntegrationConnection(Base):
+    __tablename__ = "integration_connections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider = Column(String(40), nullable=False, index=True)  # hubspot/sheets/slack/email/calendar
+    status = Column(String(20), nullable=False, default="connected", index=True)
+    config_json = Column(JSON, default=dict)
+    last_sync_at = Column(DateTime, nullable=True, index=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "provider", name="uix_user_provider_integration"),
+    )
+
+
+class IntegrationEvent(Base):
+    __tablename__ = "integration_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    connection_id = Column(Integer, ForeignKey("integration_connections.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type = Column(String(80), nullable=False, index=True)
+    status = Column(String(20), nullable=False, default="success", index=True)
+    request_payload = Column(JSON, default=dict)
+    response_payload = Column(JSON, default=dict)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+
+    connection = relationship("IntegrationConnection")
 

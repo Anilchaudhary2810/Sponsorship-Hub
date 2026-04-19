@@ -1,7 +1,7 @@
 from __future__ import annotations
 import datetime
 from pydantic import BaseModel, EmailStr, validator, ConfigDict
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Any
 from decimal import Decimal
 
 # Literal Types
@@ -121,6 +121,23 @@ class TokenResponse(BaseModel):
     refresh_token: Optional[str] = None
     token_type: str = "bearer"
     user: UserResponse
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AuthSessionResponse(BaseModel):
+    token_type: str = "bearer"
+    user: UserResponse
+    message: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RegisterResponse(BaseModel):
+    message: str
+    user: UserResponse
+    requires_verification: bool = True
+    verification_token_preview: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -299,6 +316,10 @@ class DealPayment(BaseModel):
     method: Optional[str] = None
     details: Optional[dict] = None
 
+class PaymentCheckoutConfigResponse(BaseModel):
+    provider: str = "razorpay"
+    key_id: Optional[str] = None
+
 class DealSign(BaseModel):
     role: RoleType
     signature: str
@@ -380,6 +401,317 @@ class BillingEventResponse(BaseModel):
     currency: str
     status: str
     note: Optional[str] = None
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class KYCSubmissionCreate(BaseModel):
+    document_type: Literal["aadhaar", "pan", "passport", "gst", "other"]
+    document_number_masked: str
+    document_url: Optional[str] = None
+
+
+class KYCSubmissionResponse(BaseModel):
+    id: int
+    user_id: int
+    reviewer_id: Optional[int] = None
+    document_type: str
+    document_number_masked: str
+    document_url: Optional[str] = None
+    status: str
+    risk_score: int
+    risk_flags: list[str]
+    review_note: Optional[str] = None
+    submitted_at: datetime.datetime
+    reviewed_at: Optional[datetime.datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class KYCReviewRequest(BaseModel):
+    decision: Literal["approved", "rejected"]
+    review_note: Optional[str] = None
+    risk_score: Optional[int] = None
+    risk_flags: Optional[list[str]] = None
+
+
+class TrustProfileResponse(BaseModel):
+    verification_badge: bool
+    trust_score: Decimal
+    kyc_status: str
+    latest_submission: Optional[KYCSubmissionResponse] = None
+    risk_flags: list[str]
+    risk_level: Literal["low", "medium", "high"]
+
+
+WorkspaceRole = Literal["owner", "manager", "finance", "viewer"]
+ApprovalStatus = Literal["pending", "approved", "rejected"]
+MilestoneStatus = Literal["planned", "funded", "released", "disputed"]
+DisputeStatus = Literal["open", "under_review", "resolved", "rejected"]
+NudgeState = Literal["pending", "sent", "dismissed", "done"]
+IntegrationProvider = Literal["hubspot", "sheets", "slack", "email", "calendar"]
+
+
+class DealTemplateBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    deal_type: DealType
+    terms_json: dict[str, Any] = {}
+    is_default: bool = False
+
+
+class DealTemplateCreate(DealTemplateBase):
+    pass
+
+
+class DealTemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    terms_json: Optional[dict[str, Any]] = None
+    is_default: Optional[bool] = None
+
+
+class DealTemplateResponse(DealTemplateBase):
+    id: int
+    owner_user_id: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DealApprovalCreate(BaseModel):
+    approver_role: WorkspaceRole
+    approver_user_id: Optional[int] = None
+    note: Optional[str] = None
+
+
+class DealApprovalDecision(BaseModel):
+    decision: Literal["approved", "rejected"]
+    note: Optional[str] = None
+
+
+class DealApprovalResponse(BaseModel):
+    id: int
+    deal_id: int
+    requested_by_user_id: Optional[int] = None
+    approver_user_id: Optional[int] = None
+    approver_role: WorkspaceRole
+    status: ApprovalStatus
+    note: Optional[str] = None
+    decided_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NegotiationEntryCreate(BaseModel):
+    change_type: Literal["comment", "counter_offer", "term_update"] = "comment"
+    message: Optional[str] = None
+    payload: dict[str, Any] = {}
+
+
+class NegotiationEntryResponse(BaseModel):
+    id: int
+    deal_id: int
+    actor_user_id: Optional[int] = None
+    change_type: str
+    message: Optional[str] = None
+    payload: dict[str, Any] = {}
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DealMilestoneCreate(BaseModel):
+    sequence_no: Optional[int] = None
+    title: str
+    description: Optional[str] = None
+    amount: Decimal
+    due_date: Optional[datetime.date] = None
+
+
+class DealMilestoneAction(BaseModel):
+    action: Literal["fund", "release", "mark_disputed"]
+
+
+class DealMilestoneResponse(BaseModel):
+    id: int
+    deal_id: int
+    sequence_no: int
+    title: str
+    description: Optional[str] = None
+    amount: Decimal
+    due_date: Optional[datetime.date] = None
+    status: MilestoneStatus
+    funded_at: Optional[datetime.datetime] = None
+    released_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DealDisputeCreate(BaseModel):
+    reason: str
+    details: Optional[str] = None
+
+
+class DealDisputeResolve(BaseModel):
+    decision: Literal["under_review", "resolved", "rejected"]
+    resolution_note: Optional[str] = None
+    settlement_amount: Optional[Decimal] = None
+
+
+class DealDisputeResponse(BaseModel):
+    id: int
+    deal_id: int
+    opened_by_user_id: Optional[int] = None
+    reason: str
+    details: Optional[str] = None
+    status: DisputeStatus
+    resolution_note: Optional[str] = None
+    settlement_amount: Optional[Decimal] = None
+    opened_at: datetime.datetime
+    resolved_at: Optional[datetime.datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WorkspaceCreate(BaseModel):
+    name: str
+
+
+class WorkspaceMemberInvite(BaseModel):
+    user_id: int
+    role: WorkspaceRole = "viewer"
+
+
+class WorkspaceMemberUpdate(BaseModel):
+    role: Optional[WorkspaceRole] = None
+    status: Optional[Literal["invited", "active", "removed"]] = None
+
+
+class WorkspaceMemberResponse(BaseModel):
+    id: int
+    workspace_id: int
+    user_id: int
+    role: WorkspaceRole
+    status: str
+    invited_by_user_id: Optional[int] = None
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WorkspaceResponse(BaseModel):
+    id: int
+    name: str
+    owner_user_id: int
+    is_active: bool
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    members: list[WorkspaceMemberResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WorkspaceResourceAdd(BaseModel):
+    resource_type: Literal["event", "campaign", "deal", "template", "report"]
+    resource_id: int
+
+
+class WorkspaceResourceResponse(BaseModel):
+    id: int
+    workspace_id: int
+    resource_type: str
+    resource_id: int
+    added_by_user_id: Optional[int] = None
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LifecycleNudgeResponse(BaseModel):
+    id: int
+    user_id: int
+    nudge_type: str
+    title: str
+    message: str
+    state: NudgeState
+    due_at: Optional[datetime.datetime] = None
+    payload: dict[str, Any] = {}
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NudgeStateUpdate(BaseModel):
+    state: Literal["dismissed", "done"]
+
+
+class ROIReportResponse(BaseModel):
+    role: str
+    total_deals: int
+    closed_deals: int
+    active_deals: int
+    conversion_rate: float
+    total_value: Decimal
+    paid_value: Decimal
+    avg_deal_value: Decimal
+    period_days: int
+
+
+class CampaignOutcomeRow(BaseModel):
+    id: int
+    title: str
+    status: str
+    budget: Decimal
+    linked_deals: int
+    closed_deals: int
+    conversion_rate: float
+
+
+class MonthlyExecutiveReportResponse(BaseModel):
+    month: str
+    role: str
+    kpis: dict[str, Any]
+    highlights: list[str]
+    risks: list[str]
+
+
+class IntegrationConnectRequest(BaseModel):
+    provider: IntegrationProvider
+    config_json: Optional[dict[str, Any]] = None
+
+
+class IntegrationConnectionResponse(BaseModel):
+    id: int
+    user_id: int
+    provider: IntegrationProvider
+    status: str
+    config_json: dict[str, Any]
+    last_sync_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class IntegrationSyncRequest(BaseModel):
+    event_type: str
+    payload: dict[str, Any] = {}
+
+
+class IntegrationEventResponse(BaseModel):
+    id: int
+    connection_id: int
+    event_type: str
+    status: str
+    request_payload: dict[str, Any]
+    response_payload: dict[str, Any]
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)

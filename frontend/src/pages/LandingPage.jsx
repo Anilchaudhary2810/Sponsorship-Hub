@@ -9,6 +9,16 @@ const LandingPage = () => {
   const [stats, setStats] = React.useState({ sponsors: 0, events: 0, closedDeals: 0 });
   const [snapshot, setSnapshot] = React.useState({ events: [], campaigns: [] });
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [theme, setTheme] = React.useState(() => localStorage.getItem("app-theme") || "dark");
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("app-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   React.useEffect(() => {
     fetchPublicStats()
@@ -77,6 +87,14 @@ const LandingPage = () => {
           <a href="#features" className="nav-link">Features</a>
           <a href="#how-it-works" className="nav-link">Process</a>
           <a href="#stats" className="nav-link">Proof</a>
+          <button
+            type="button"
+            className="landing-theme-toggle"
+            onClick={toggleTheme}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          >
+            {theme === "dark" ? "\u2600" : "\u263E"}
+          </button>
           <button onClick={() => navigate('/login')} className="btn-primary nav-login-btn">
             Login
           </button>
@@ -91,6 +109,9 @@ const LandingPage = () => {
             <a href="#features" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Features</a>
             <a href="#how-it-works" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Process</a>
             <a href="#stats" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Proof</a>
+            <button type="button" className="landing-theme-toggle mobile-theme-toggle" onClick={toggleTheme}>
+              {theme === "dark" ? "Light Mode" : "Dark Mode"}
+            </button>
             <button onClick={() => navigate('/login')} className="btn-primary mobile-login-btn">
               Login
             </button>

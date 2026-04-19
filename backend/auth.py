@@ -4,7 +4,7 @@ import hmac
 import hashlib
 
 from jose import JWTError, jwt
-from fastapi import Depends, Request
+from fastapi import Depends, Request, WebSocket
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -52,6 +52,36 @@ def decode_token_sub(token: str, expected_type: str) -> int:
         return int(str(sub_val))
     except (TypeError, ValueError):
         raise AuthenticationError("Invalid token subject")
+
+
+def get_ws_access_token(websocket: WebSocket) -> Optional[str]:
+    cookie_token = websocket.cookies.get("access_token")
+    if cookie_token:
+        return cookie_token
+
+    # Fallback for non-cookie clients: pass token via websocket subprotocol.
+    # Supported forms:
+    # 1) ["access_token", "<jwt>"] or ["bearer", "<jwt>"]
+    # 2) ["access_token.<jwt>"] or ["bearer.<jwt>"]
+    protocol_header = websocket.headers.get("sec-websocket-protocol", "")
+    offered = [segment.strip() for segment in protocol_header.split(",") if segment.strip()]
+    if not offered:
+        return None
+
+    if len(offered) >= 2 and offered[0] in {"access_token", "bearer"}:
+        return offered[1]
+
+    for protocol in offered:
+        if protocol.startswith("access_token."):
+            token = protocol[len("access_token.") :]
+            if token:
+                return token
+        if protocol.startswith("bearer."):
+            token = protocol[len("bearer.") :]
+            if token:
+                return token
+
+    return None
 
 def get_current_user(
     request: Request,

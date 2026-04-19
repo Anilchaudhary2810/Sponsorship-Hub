@@ -6,12 +6,15 @@ const Register = lazy(() => import("./pages/Register"));
 const Login = lazy(() => import("./pages/Login"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const SponsorDashboard = lazy(() => import("./pages/SponsorDashboard"));
 const OrganizerDashboard = lazy(() => import("./pages/OrganizerDashboard"));
 const InfluencerDashboard = lazy(() => import("./pages/InfluencerDashboard"));
 const PublicProfile = lazy(() => import("./pages/PublicProfile"));
+const MyProfilePage = lazy(() => import("./pages/MyProfilePage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
+const ScaleOpsPage = lazy(() => import("./pages/ScaleOpsPage"));
 
 const PageLoader = () => (
   <div
@@ -75,12 +78,29 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/profile/:userId" element={<PublicProfile />} />
+        <Route
+          path="/my-profile"
+          element={(
+            <PrivateRoute>
+              <MyProfilePage />
+            </PrivateRoute>
+          )}
+        />
         <Route
           path="/analytics/:userId?"
           element={(
             <PrivateRoute>
               <AnalyticsPage />
+            </PrivateRoute>
+          )}
+        />
+        <Route
+          path="/scale-ops"
+          element={(
+            <PrivateRoute>
+              <ScaleOpsPage />
             </PrivateRoute>
           )}
         />

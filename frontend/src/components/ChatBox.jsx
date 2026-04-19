@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchChatHistory } from "../services/api";
-import { getAccessToken } from "../api/api";
+import { WS_BASE_URL } from "../api/api";
 import "./ChatBox.css";
 
 const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
@@ -27,10 +27,6 @@ const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
   useEffect(() => {
     if (!dealId) return;
 
-    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
-    const wsHost = apiBase.replace(/^http/, "ws");
-    const token = getAccessToken();
-
     // 1. Fetch history
     const fetchHistory = async () => {
       try {
@@ -52,9 +48,7 @@ const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
     fetchHistory();
 
     // 2. Setup WebSocket
-    const wsUrl = token
-      ? `${wsHost}/chat/ws/${dealId}?token=${encodeURIComponent(token)}`
-      : `${wsHost}/chat/ws/${dealId}`;
+    const wsUrl = `${WS_BASE_URL}/chat/ws/${dealId}`;
     const socket = new WebSocket(wsUrl);
 
     socket.onmessage = (event) => {

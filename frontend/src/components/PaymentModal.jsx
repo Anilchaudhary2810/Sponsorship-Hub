@@ -4,78 +4,85 @@ import "./PaymentModal.css";
 const PaymentModal = ({ amount, currency, onSuccess, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [method, setMethod] = useState("card"); // 'card', 'upi', 'netbanking'
-  const [inputAmount, setInputAmount] = useState(amount && Number(amount) > 0 ? String(amount) : "0");
   const [selectedBank, setSelectedBank] = useState("");
-  
-  React.useEffect(() => {
-    if (amount) setInputAmount(String(amount));
-  }, [amount]);
+
+  const parsedAmount = Number(amount);
+  const normalizedAmount = Number.isFinite(parsedAmount) && parsedAmount > 0 ? parsedAmount : 0;
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (loading) return;
 
-    if (Number(inputAmount) <= 0) {
-      alert("Please enter a valid payment amount.");
+    if (normalizedAmount <= 0) {
+      alert("Invalid deal amount. Please contact support before checkout.");
       return;
     }
 
     setLoading(true);
-    
-    // Simulate payment processing logic
+
+    // Simulate gateway handoff for demo mode.
     setTimeout(() => {
       setLoading(false);
-      if (onSuccess) onSuccess({
-        amount: Number(inputAmount),
-        currency,
-        method,
-        details: method === 'netbanking' ? { bank: selectedBank } : {}
-      });
+      if (onSuccess) {
+        onSuccess({
+          amount: normalizedAmount,
+          currency,
+          method,
+          details: method === "netbanking" ? { bank: selectedBank } : {},
+        });
+      }
     }, 2500);
   };
 
   return (
     <div className="payment-modal-overlay" onClick={onClose}>
       <div className="payment-modal-content" onClick={(e) => e.stopPropagation()}>
-        <button className="payment-modal-close" onClick={onClose}>✕</button>
-        
+        <button className="payment-modal-close" onClick={onClose}>X</button>
+
         <header className="payment-header">
           <h2>Secure Checkout</h2>
           <div className="amount-display">
             <span className="label">Amount to Pay</span>
             <div className="amount-input-wrapper">
-              <span className="currency-symbol">{currency === "INR" ? "₹" : "$"}</span>
-              <input 
-                type="number" 
-                className="payment-amount-input" 
-                value={inputAmount} 
-                onChange={(e) => setInputAmount(e.target.value)}
-                placeholder="0.00"
+              <span className="currency-symbol">{currency === "INR" ? "Rs" : "$"}</span>
+              <input
+                type="text"
+                className="payment-amount-input locked"
+                value={normalizedAmount.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+                readOnly
+                aria-readonly="true"
               />
             </div>
+            <small className="amount-lock-note">Amount is locked from the server-side deal value.</small>
           </div>
         </header>
 
         <div className="payment-methods-tabs">
-          <button 
-            className={`method-tab ${method === 'card' ? 'active' : ''}`}
-            onClick={() => setMethod('card')}
+          <button
+            className={`method-tab ${method === "card" ? "active" : ""}`}
+            onClick={() => setMethod("card")}
+            type="button"
           >
-            <span className="icon">💳</span>
+            <span className="icon">Card</span>
             <span className="text">Card</span>
           </button>
-          <button 
-            className={`method-tab ${method === 'upi' ? 'active' : ''}`}
-            onClick={() => setMethod('upi')}
+          <button
+            className={`method-tab ${method === "upi" ? "active" : ""}`}
+            onClick={() => setMethod("upi")}
+            type="button"
           >
-            <span className="icon">📱</span>
+            <span className="icon">UPI</span>
             <span className="text">UPI</span>
           </button>
-          <button 
-            className={`method-tab ${method === 'netbanking' ? 'active' : ''}`}
-            onClick={() => setMethod('netbanking')}
+          <button
+            className={`method-tab ${method === "netbanking" ? "active" : ""}`}
+            onClick={() => setMethod("netbanking")}
+            type="button"
           >
-            <span className="icon">🏦</span>
+            <span className="icon">Bank</span>
             <span className="text">Banking</span>
           </button>
         </div>
@@ -111,7 +118,7 @@ const PaymentModal = ({ amount, currency, onSuccess, onClose }) => {
             <div className="method-fields animate-fade-in">
               <div className="upi-info">
                 <div className="qr-placeholder">
-                  <div className="qr-icon">📱</div>
+                  <div className="qr-icon">UPI</div>
                   <p>Scan OR enter UPI ID</p>
                 </div>
               </div>
@@ -130,9 +137,9 @@ const PaymentModal = ({ amount, currency, onSuccess, onClose }) => {
             <div className="method-fields animate-fade-in">
               <div className="form-group">
                 <label>Select Your Bank</label>
-                <select 
-                  className="bank-select" 
-                  required 
+                <select
+                  className="bank-select"
+                  required
                   value={selectedBank}
                   onChange={(e) => setSelectedBank(e.target.value)}
                 >
@@ -147,27 +154,27 @@ const PaymentModal = ({ amount, currency, onSuccess, onClose }) => {
               <div className="popular-banks">
                 <p>Popular Banks</p>
                 <div className="bank-grid">
-                  <div 
-                    className={`bank-item ${selectedBank === 'sbi' ? 'active' : ''}`}
-                    onClick={() => setSelectedBank('sbi')}
+                  <div
+                    className={`bank-item ${selectedBank === "sbi" ? "active" : ""}`}
+                    onClick={() => setSelectedBank("sbi")}
                   >
                     SBI
                   </div>
-                  <div 
-                    className={`bank-item ${selectedBank === 'hdfc' ? 'active' : ''}`}
-                    onClick={() => setSelectedBank('hdfc')}
+                  <div
+                    className={`bank-item ${selectedBank === "hdfc" ? "active" : ""}`}
+                    onClick={() => setSelectedBank("hdfc")}
                   >
                     HDFC
                   </div>
-                  <div 
-                    className={`bank-item ${selectedBank === 'icici' ? 'active' : ''}`}
-                    onClick={() => setSelectedBank('icici')}
+                  <div
+                    className={`bank-item ${selectedBank === "icici" ? "active" : ""}`}
+                    onClick={() => setSelectedBank("icici")}
                   >
                     ICICI
                   </div>
-                  <div 
-                    className={`bank-item ${selectedBank === 'axis' ? 'active' : ''}`}
-                    onClick={() => setSelectedBank('axis')}
+                  <div
+                    className={`bank-item ${selectedBank === "axis" ? "active" : ""}`}
+                    onClick={() => setSelectedBank("axis")}
                   >
                     AXIS
                   </div>
@@ -177,7 +184,7 @@ const PaymentModal = ({ amount, currency, onSuccess, onClose }) => {
           )}
 
           <div className="payment-footer">
-            <p className="security-note">🔒 Encrypted 256-bit secure payment</p>
+            <p className="security-note">Encrypted 256-bit secure payment</p>
             <button type="submit" disabled={loading} className="pay-now-btn">
               {loading ? (
                 <div className="loader-container">
@@ -185,7 +192,10 @@ const PaymentModal = ({ amount, currency, onSuccess, onClose }) => {
                   <span>Processing...</span>
                 </div>
               ) : (
-                `Pay ${currency === "INR" ? "₹" : "$"}${Number(inputAmount).toLocaleString()}`
+                `Pay ${currency === "INR" ? "Rs" : "$"}${normalizedAmount.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`
               )}
             </button>
           </div>

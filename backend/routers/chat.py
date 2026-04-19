@@ -3,24 +3,15 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 import json
 import asyncio
-from jose import JWTError
 
 from ..database import get_db
 from .. import models, schemas, crud, exceptions
-from ..auth import decode_token_sub, get_current_user
+from ..auth import decode_token_sub, get_current_user, get_ws_access_token
 from ..crud import get_user
 from ..core.realtime import realtime_bus
 from backend.core.limiter import limiter
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-
-async def get_current_user_ws(token: str, db: Session):
-    try:
-        user_id = decode_token_sub(token, expected_type="access")
-        return get_user(db, int(user_id))
-    except (JWTError, exceptions.AuthenticationError, ValueError):
-        return None
 
 
 class ConnectionManager:
@@ -126,15 +117,17 @@ async def websocket_endpoint(websocket: WebSocket, deal_id: int, db: Session = D
         except RuntimeError:
             return
 
-    token = websocket.cookies.get("access_token")
-    if not token:
-        token = websocket.query_params.get("token")
-
+    token = get_ws_access_token(websocket)
     if not token:
         await _safe_ws_close(code=1008)
         return
 
-    user = await get_current_user_ws(token, db)
+    try:
+        user_id_from_token = decode_token_sub(token, expected_type="access")
+        user = get_user(db, int(user_id_from_token))
+    except (exceptions.AuthenticationError, ValueError):
+        user = None
+
     if not user:
         await _safe_ws_close(code=1008)
         return
