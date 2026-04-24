@@ -56,3 +56,60 @@
   border: 1px solid var(--border);
   color: var(--foreground);
 }
+
+.verify-email-resend {
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--card) 90%, var(--muted));
+}
+
+.verify-email-help {
+  margin: 0 0 10px;
+  color: var(--muted-foreground);
+  font-size: 0.95rem;
+}
+
+.verify-email-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.verify-email-input {
+  flex: 1;
+  min-width: 220px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--input);
+  color: var(--foreground);
+}
+
+.verify-email-resend-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.verify-email-resend-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.verify-email-resend-message {
+  margin: 10px 0 0;
+}
+
+.verify-email-resend-message.success {
+  color: color-mix(in srgb, var(--success) 75%, var(--foreground));
+}
+
+.verify-email-resend-message.error {
+  color: color-mix(in srgb, var(--destructive) 78%, var(--foreground));
+}

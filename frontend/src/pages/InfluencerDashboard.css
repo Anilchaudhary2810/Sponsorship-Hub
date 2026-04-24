@@ -1,7 +1,8 @@
 .influencer-container {
   padding: 40px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   min-height: calc(100vh - 72px);
   background: var(--background);
 }
@@ -24,9 +25,9 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  color: #818cf8;
+  background: hsla(var(--color-primary), 0.1);
+  border: 1px solid hsla(var(--color-primary), 0.3);
+  color: var(--primary-strong);
   border-radius: 12px;
   font-weight: 700;
   font-size: 13px;
@@ -39,7 +40,7 @@
   color: white;
   border-color: transparent;
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 15px hsla(var(--color-primary), 0.4);
 }
 
 .subtitle {
@@ -291,7 +292,7 @@
   letter-spacing: 0.05em;
 }
 
-.status-pill.proposed  { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); }
+.status-pill.proposed  { background: hsla(var(--color-primary), 0.15); color: var(--primary-strong); border: 1px solid hsla(var(--color-primary), 0.3); }
 .status-pill.accepted  { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
 .status-pill.signed    { background: rgba(6,182,212,0.15);  color: #22d3ee; border: 1px solid rgba(6,182,212,0.3); }
 .status-pill.payment_pending { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
@@ -364,7 +365,7 @@
   background: var(--primary-gradient);
   color: white;
   border-color: transparent;
-  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+  box-shadow: 0 4px 12px hsla(var(--color-primary), 0.3);
 }
 
 .mini-action-btn.reject {
@@ -412,14 +413,14 @@
 }
 
 .mini-action-btn.primary-outline {
-  background: rgba(99,102,241,0.08);
-  border: 1px solid rgba(99,102,241,0.35);
-  color: #818cf8;
+  background: hsla(var(--color-primary), 0.1);
+  border: 1.5px solid hsla(var(--color-primary), 0.55);
+  color: var(--primary-strong);
 }
 
 .mini-action-btn.primary-outline:hover {
-  background: rgba(99,102,241,0.18);
-  border-color: rgba(99,102,241,0.6);
+  background: hsla(var(--color-primary), 0.18);
+  border-color: hsla(var(--color-primary), 0.6);
 }
 
 .mini-action-btn.legal-outline {
@@ -431,6 +432,12 @@
 .mini-action-btn.legal-outline:hover {
   background: rgba(16,185,129,0.15);
   border-color: rgba(16,185,129,0.5);
+}
+
+.mini-action-btn.primary-outline:disabled,
+.mini-action-btn.legal-outline:disabled {
+  opacity: 0.72;
+  border-style: solid;
 }
 
 /* ===== REVIEWED BADGE ===== */
@@ -576,12 +583,12 @@
   font-size: 14px;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px hsla(var(--color-primary), 0.3);
 }
 
 .accept-pill-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
+  box-shadow: 0 8px 24px hsla(var(--color-primary), 0.45);
 }
 
 .applied-pill-btn {

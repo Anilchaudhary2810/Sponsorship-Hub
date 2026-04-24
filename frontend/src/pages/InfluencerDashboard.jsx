@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import ChatBox from "../components/ChatBox";
@@ -13,6 +13,7 @@ import "./InfluencerDashboard.css";
 import {
   fetchCampaigns,
   fetchDeals,
+  fetchDeal,
   createDeal,
   acceptDeal,
   signDeal as signDealFn,
@@ -22,9 +23,12 @@ import {
 import AgreementModal from "../components/AgreementModal";
 import ReviewModal from "../components/ReviewModal";
 import DocumentViewer from "../components/DocumentViewer";
+import ActivityProgressModal from "../components/ActivityProgressModal";
 
 const InfluencerDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const dealIdFromQuery = Number(searchParams.get("dealId") || 0);
   const [campaigns, setCampaigns] = useState([]);
   const [deals, setDeals] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +44,7 @@ const InfluencerDashboard = () => {
   const [showDocument, setShowDocument] = useState(null);
   const [pendingCampaign, setPendingCampaign] = useState(null);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
+  const [selectedPipelineDeal, setSelectedPipelineDeal] = useState(null);
 
   const loadData = async () => {
     try {
@@ -166,12 +171,63 @@ const InfluencerDashboard = () => {
     },
   ];
 
+  const getLatestItems = (items, count = 4) =>
+    [...items]
+      .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
+      .slice(0, count);
+
+  const visiblePipelineDeals = deals.filter((deal) => deal.status !== "rejected");
+
+  const filteredCampaigns = campaigns.filter((campaign) =>
+    campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    campaign.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    campaign.platform_required.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const latestPipelineDeals = getLatestItems(visiblePipelineDeals);
+  const latestCampaigns = getLatestItems(filteredCampaigns);
+
   const quickActions = [
     { key: "discover", label: "Discover", tone: "primary", onClick: () => setShowFilters(true) },
     { key: "ops", label: "Scale Ops", tone: "emphasis", onClick: () => navigate("/scale-ops") },
     { key: "analytics", label: "Analytics", onClick: () => navigate("/analytics") },
     { key: "profile", label: "Profile", onClick: () => navigate("/my-profile") },
   ];
+
+  const openDealProgress = (deal) => {
+    const dealId = Number(deal?.id || 0);
+    if (!dealId) return;
+    fetchDeal(dealId)
+      .then((resp) => {
+        const fresh = mapDealData(resp.data, currentUser);
+        setSelectedPipelineDeal(fresh);
+      })
+      .catch(() => {
+        setSelectedPipelineDeal(deal);
+      });
+  };
+
+  useEffect(() => {
+    if (!dealIdFromQuery || !deals.length || selectedPipelineDeal) return;
+    const matched = deals.find((deal) => Number(deal.id) === dealIdFromQuery);
+    if (matched) {
+      openDealProgress(matched);
+    }
+  }, [dealIdFromQuery, deals, selectedPipelineDeal]);
+
+  const closePipelineDealModal = () => {
+    setSelectedPipelineDeal(null);
+    if (searchParams.has("dealId")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("dealId");
+      next.delete("focus");
+      setSearchParams(next, { replace: true });
+    }
+  };
+
+  const goToActivityCenter = (section) => {
+    navigate(`/activity-center?section=${section}`);
+  };
 
   return (
     <div>
@@ -182,7 +238,7 @@ const InfluencerDashboard = () => {
             <div className="title-action-row">
               <h1 className="influencer-title">Influencer Dashboard</h1>
               <button className="analytics-nav-btn" onClick={() => navigate('/analytics')}>
-                ðŸ“Š Analytics
+                Analytics
               </button>
             </div>
             <p className="subtitle">Track brand opportunities and close campaign deals faster.</p>
@@ -195,26 +251,39 @@ const InfluencerDashboard = () => {
           {/* Active Deals Section */}
           <section className="dashboard-section-wide">
             <div className="section-header">
-              <h2>My Brand Pipeline</h2>
-              <span className="badge">{deals.length} Connections</span>
+              <h2>
+                <button type="button" className="section-nav-link" onClick={() => goToActivityCenter("pipeline")}>
+                  My Brand Pipeline
+                </button>
+              </h2>
+              <span className="badge">{visiblePipelineDeals.length} Connections</span>
             </div>
             <div className="horizontal-scroll-container">
               <div className="deal-pipeline-grid">
-                {deals.filter(d => d.status !== 'rejected').map(deal => (
+                {latestPipelineDeals.map(deal => (
                   <DealCard key={deal.id} deal={deal}>
                     <div className="deal-card-content-wide">
-                      <div className="deal-type-chip">Creator Deal</div>
-                      <h4 className="deal-title-mini">
-                        <span
-                          className="profile-link"
-                          onClick={() => navigate(`/profile/${deal.sponsor_id}`)}
-                          title="View Sponsor Profile"
+                      <div className="pipeline-card-head">
+                        <div className="deal-type-chip">Creator Deal</div>
+                        <h4 className="deal-title-mini">
+                          <span
+                            className="profile-link"
+                            onClick={() => navigate(`/profile/${deal.sponsor_id}`)}
+                            title="View Sponsor Profile"
+                          >
+                            {getDealPartnerName(deal)}
+                          </span>
+                        </h4>
+                        <button
+                          type="button"
+                          className="pipeline-activity-link"
+                          onClick={() => openDealProgress(deal)}
+                          title="Open activity progress"
                         >
-                          {getDealPartnerName(deal)}
-                        </span>
-                      </h4>
-                      <p className="deal-subject-line">{getDealSubject(deal)}</p>
-                      <p className="deal-context-line">{getDealSubline(deal)}</p>
+                          {getDealSubject(deal)}
+                        </button>
+                        <p className="deal-context-line">{getDealSubline(deal)}</p>
+                      </div>
                       <div className="deal-meta-row">
                         <span className="deal-meta-item">Value: {formatCurrency(getDealValue(deal))}</span>
                         <span className="deal-meta-item">ID: #{deal.id}</span>
@@ -232,14 +301,35 @@ const InfluencerDashboard = () => {
                             <button className="mini-action-btn reject" onClick={() => handleDealAction(deal.id, acceptDeal, { role: "influencer", accept: false })}>Reject</button>
                           </>
                         )}
-                        <button
-                          className="mini-action-btn legal"
-                          disabled={!deal.paymentDone || deal.influencerSigned}
-                          onClick={() => deal.paymentDone && !deal.influencerSigned && handleStartSigning(deal)}
-                        >
-                          Sign
-                        </button>
-                        </div>
+                        {deal.status === "closed" ? (
+                          reviewedDeals[deal.id] ? (
+                            <div className="reviewed-badge">
+                              {Array.from({ length: 5 }, (_, i) => (
+                                <span key={i} className={i < reviewedDeals[deal.id] ? "rstar filled" : "rstar"}>*</span>
+                              ))}
+                              <span className="reviewed-label">Reviewed</span>
+                            </div>
+                          ) : (
+                            <button
+                              className="mini-action-btn review"
+                              onClick={() => {
+                                setReviewDeal(deal);
+                                setShowReviewModal(true);
+                              }}
+                            >
+                              Review
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            className="mini-action-btn legal"
+                            disabled={!deal.paymentDone || deal.influencerSigned}
+                            onClick={() => deal.paymentDone && !deal.influencerSigned && handleStartSigning(deal)}
+                          >
+                            Sign
+                          </button>
+                        )}
+                      </div>
                       <div className="pipeline-main-actions">
                         <button
                           className="mini-action-btn legal-outline"
@@ -249,38 +339,18 @@ const InfluencerDashboard = () => {
                           Agreement
                         </button>
                         <button
-                          className="mini-action-btn primary-outline"
+                          className="mini-action-btn primary-outline invoice-btn"
                           disabled={!deal.paymentDone}
                           onClick={() => deal.paymentDone && setShowDocument({ type: "invoice", deal })}
                         >
                           Invoice
                         </button>
-                        {reviewedDeals[deal.id] ? (
-                          <div className="reviewed-badge">
-                            {Array.from({ length: 5 }, (_, i) => (
-                              <span key={i} className={i < reviewedDeals[deal.id] ? "rstar filled" : "rstar"}>*</span>
-                            ))}
-                            <span className="reviewed-label">Reviewed</span>
-                          </div>
-                        ) : (
-                          <button
-                            className="mini-action-btn review"
-                            disabled={deal.status !== "closed"}
-                            onClick={() => {
-                              if (deal.status !== "closed") return;
-                              setReviewDeal(deal);
-                              setShowReviewModal(true);
-                            }}
-                          >
-                            Review
-                          </button>
-                        )}
                         <button className="mini-action-btn chat" onClick={() => setActiveDealChat(deal)}>Chat</button>
                       </div>
                     </div>
                   </DealCard>
                 ))}
-                {deals.filter(d => d.status !== 'rejected').length === 0 && (
+                {visiblePipelineDeals.length === 0 && (
                   <EmptyState
                     title="No active deals yet"
                     description="Apply to a campaign to start your pipeline."
@@ -297,7 +367,11 @@ const InfluencerDashboard = () => {
             <div className="section-header marketplace-header-row">
               <div className="section-title-group">
                 <div className="title-with-action">
-                  <h2>Brand Opportunities</h2>
+                  <h2>
+                    <button type="button" className="section-nav-link" onClick={() => goToActivityCenter("opportunities")}>
+                      Brand Opportunities
+                    </button>
+                  </h2>
                   <button 
                     className={`filter-toggle-btn ${showFilters ? 'active' : ''}`}
                     onClick={() => setShowFilters(!showFilters)}
@@ -321,11 +395,7 @@ const InfluencerDashboard = () => {
               )}
             </div>
             <div className="campaign-horizontal-grid">
-              {campaigns.filter(c => 
-                c.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                c.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                c.platform_required.toLowerCase().includes(searchTerm.toLowerCase())
-              ).map(camp => {
+              {latestCampaigns.map(camp => {
                 const isApplied = deals.some(d => Number(d.campaign_id) === Number(camp.id));
                 return (
                   <div key={camp.id} className="campaign-card-modern">
@@ -333,8 +403,8 @@ const InfluencerDashboard = () => {
                     <h3 className="campaign-card-title">{camp.title}</h3>
                     <p className="campaign-card-desc">{camp.description}</p>
                     <div className="campaign-meta-info">
-                      <div className="meta-item"><span>ðŸ’°</span> {formatCurrency(camp.budget)}</div>
-                      <div className="meta-item"><span>ðŸ“¦</span> {camp.deliverables}</div>
+                      <div className="meta-item"><span>Budget:</span> {formatCurrency(camp.budget)}</div>
+                      <div className="meta-item"><span>Deliverables:</span> {camp.deliverables}</div>
                     </div>
                     <div className="marketplace-actions-row">
                       {isApplied ? (
@@ -348,11 +418,7 @@ const InfluencerDashboard = () => {
                   </div>
                 );
               })}
-              {campaigns.filter(c =>
-                c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                c.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                c.platform_required.toLowerCase().includes(searchTerm.toLowerCase())
-              ).length === 0 && (
+              {filteredCampaigns.length === 0 && (
                 <EmptyState
                   title="No campaigns found"
                   description="Try a broader keyword to discover more opportunities."
@@ -382,6 +448,36 @@ const InfluencerDashboard = () => {
             onClose={() => setShowDocument(null)} 
         />
       )}
+      {selectedPipelineDeal && (
+        <ActivityProgressModal
+          deal={selectedPipelineDeal}
+          role="influencer"
+          isReviewed={Boolean(reviewedDeals[selectedPipelineDeal.id])}
+          onClose={closePipelineDealModal}
+          onOpenDetails={() => navigate("/influencer-dashboard")}
+          actions={{
+            accept:
+              selectedPipelineDeal.status === "proposed" && !selectedPipelineDeal.influencerAccepted
+                ? () => handleDealAction(selectedPipelineDeal.id, acceptDeal, { role: "influencer", accept: true })
+                : null,
+            sign:
+              selectedPipelineDeal.paymentDone && !selectedPipelineDeal.influencerSigned
+                ? () => handleStartSigning(selectedPipelineDeal)
+                : null,
+            review:
+              selectedPipelineDeal.status === "closed" && !reviewedDeals[selectedPipelineDeal.id]
+                ? () => {
+                    setReviewDeal(selectedPipelineDeal);
+                    setShowReviewModal(true);
+                  }
+                : null,
+            agreement: selectedPipelineDeal.influencerSigned ? () => setShowDocument({ type: "agreement", deal: selectedPipelineDeal }) : null,
+            invoice: selectedPipelineDeal.paymentDone ? () => setShowDocument({ type: "invoice", deal: selectedPipelineDeal }) : null,
+            chat: () => setActiveDealChat(selectedPipelineDeal),
+          }}
+          formatCurrency={formatCurrency}
+        />
+      )}
       {showApplyDialog && (
         <div className="proposal-modal-overlay" onClick={() => setShowApplyDialog(false)}>
           <div className="proposal-modal-card compact" onClick={(e) => e.stopPropagation()}>
@@ -405,12 +501,4 @@ const InfluencerDashboard = () => {
 };
 
 export default InfluencerDashboard;
-
-
-
-
-
-
-
-
 

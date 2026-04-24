@@ -25,16 +25,16 @@
 }
 
 .media-count-badge {
-  background: rgba(99,102,241,0.15);
-  border: 1px solid rgba(99,102,241,0.3);
-  color: #818cf8;
+  background: hsla(var(--color-primary), 0.15);
+  border: 1px solid hsla(var(--color-primary), 0.3);
+  color: var(--primary-strong);
   padding: 3px 12px;
   border-radius: 20px;
   font-size: 13px;
 }
 
 .add-media-btn {
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: var(--primary-gradient);
   border: none;
   color: white;
   padding: 10px 20px;
@@ -46,7 +46,7 @@
 }
 .add-media-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(99,102,241,0.3);
+  box-shadow: 0 8px 20px hsla(var(--color-primary), 0.3);
 }
 
 /* Add Form */
@@ -76,7 +76,7 @@
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--muted-foreground);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 6px;
@@ -95,7 +95,7 @@
 }
 .media-select:focus, .media-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--primary);
 }
 
 .add-form-actions {
@@ -148,7 +148,7 @@
 .media-gallery-item:hover {
   transform: translateY(-4px);
   box-shadow: 0 16px 32px rgba(0,0,0,0.4);
-  border-color: rgba(99,102,241,0.3);
+  border-color: hsla(var(--color-primary), 0.3);
 }
 
 .media-item-link {
@@ -184,7 +184,7 @@
 
 .video-item .video-thumb {
   height: 180px;
-  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2));
+  background: linear-gradient(135deg, hsla(var(--color-primary), 0.2), rgba(168,85,247,0.2));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -193,7 +193,7 @@
 }
 .play-icon {
   font-size: 36px;
-  background: rgba(99,102,241,0.8);
+  background: hsla(var(--color-primary), 0.8);
   width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -224,7 +224,7 @@
 .media-caption {
   padding: 10px 14px;
   font-size: 13px;
-  color: #64748b;
+  color: var(--muted-foreground);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -259,6 +259,6 @@
   background: rgba(255,255,255,0.02);
   border: 2px dashed rgba(255,255,255,0.08);
   border-radius: 16px;
-  color: #475569;
+  color: var(--muted-foreground);
 }
 .media-empty-icon { font-size: 48px; margin-bottom: 12px; }

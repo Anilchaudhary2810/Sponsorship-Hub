@@ -17,6 +17,7 @@ from .collaboration import router as collaboration_router
 from .retention import router as retention_router
 from .reporting import router as reporting_router
 from .integrations import router as integrations_router
+from .ai_assistant import router as ai_assistant_router
 
 __all__ = [
     "users_router", 
@@ -39,4 +40,5 @@ __all__ = [
     "retention_router",
     "reporting_router",
     "integrations_router",
+    "ai_assistant_router",
 ]

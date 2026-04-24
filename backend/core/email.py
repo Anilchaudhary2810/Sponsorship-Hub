@@ -55,3 +55,21 @@ def send_password_reset_email(*, to_email: str, reset_link: str, expires_minutes
     )
     send_email(to_email=to_email, subject=subject, text_body=text_body, html_body=html_body)
 
+
+def send_verification_email(*, to_email: str, verify_link: str, expires_hours: int = 24) -> None:
+    subject = "Verify your Sponsorship Hub account"
+    text_body = (
+        "Welcome to Sponsorship Hub.\n\n"
+        "Please verify your email to activate your account.\n"
+        f"Verification link (valid for about {expires_hours} hours):\n"
+        f"{verify_link}\n\n"
+        "If you did not create this account, you can ignore this email."
+    )
+    html_body = (
+        "<p>Welcome to Sponsorship Hub.</p>"
+        "<p>Please verify your email to activate your account.</p>"
+        f"<p><a href=\"{verify_link}\">Verify Email</a> "
+        f"(valid for about {expires_hours} hours).</p>"
+        "<p>If you did not create this account, you can ignore this email.</p>"
+    )
+    send_email(to_email=to_email, subject=subject, text_body=text_body, html_body=html_body)

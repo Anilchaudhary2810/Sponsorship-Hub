@@ -38,9 +38,9 @@ const PublicProfile = () => {
 
   const getRoleBadge = (role) => {
     const badges = {
-      sponsor: { icon: "💎", label: "Brand Sponsor", color: "#6366f1" },
+      sponsor: { icon: "💎", label: "Brand Sponsor", color: "#f97316" },
       organizer: { icon: "🎪", label: "Event Organizer", color: "#10b981" },
-      influencer: { icon: "✨", label: "Content Creator", color: "#f59e0b" }
+      influencer: { icon: "✨", label: "Content Creator", color: "#0ea5e9" }
     };
     return badges[role] || { icon: "👤", label: role, color: "#94a3b8" };
   };
@@ -89,7 +89,7 @@ const PublicProfile = () => {
         <div className="profile-hero-glow" style={{ background: badge.color }}></div>
         <div className="profile-hero-content">
           <div className="profile-avatar-wrapper">
-            <div className="profile-avatar" style={{ background: `linear-gradient(135deg, ${badge.color}, #a855f7)` }}>
+            <div className="profile-avatar" style={{ background: `linear-gradient(135deg, ${badge.color}, #ea580c)` }}>
               {user.full_name?.charAt(0).toUpperCase()}
             </div>
             {user.verification_badge && (

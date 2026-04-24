@@ -39,10 +39,23 @@ class Settings(BaseSettings):
 
     # Frontend URL used to compose reset/verification links in emails
     FRONTEND_BASE_URL: str = "http://localhost:5173"
+    EMAIL_VERIFICATION_EXPIRE_HOURS: int = 24
+
+    # AI Assistant
+    AI_API_KEY: Optional[str] = None
+    AI_MODEL: str = "gpt-4o-mini"
+    AI_API_BASE_URL: str = "https://api.openai.com/v1"
+    AI_TIMEOUT_SECONDS: int = 25
     
 
     # CORS — must list explicit origins when allow_credentials=True (wildcard is invalid)
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://127.0.0.1:5173", "https://sponsorship-hub.vercel.app"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "https://sponsorship-hub.vercel.app",
+    ]
     
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

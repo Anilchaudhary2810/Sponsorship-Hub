@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import ChatBox from "../components/ChatBox";
@@ -16,10 +16,12 @@ import EventDetailModal from "../components/EventDetailModal";
 import QuickActionsBar from "../components/QuickActionsBar";
 import { INDIAN_STATES } from "../utils/constants";
 import "./SponsorDashboard.css";
+import ActivityProgressModal from "../components/ActivityProgressModal";
 import {
   acceptDeal,
   fetchEvents,
   fetchDeals,
+  fetchDeal,
   createPaymentOrder,
   fetchPaymentCheckoutConfig,
   signDeal as signDealFn,
@@ -61,6 +63,8 @@ const loadRazorpaySdk = () =>
 
 const SponsorDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const dealIdFromQuery = Number(searchParams.get("dealId") || 0);
   const [activePipeline, setActivePipeline] = useState("events"); // 'events' or 'influencers'
   const indianStates = INDIAN_STATES;
   const [selectedState, setSelectedState] = useState("All States");
@@ -86,7 +90,9 @@ const SponsorDashboard = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewedDeals, setReviewedDeals] = useState({}); // { dealId: rating }
   const [selectedEventDetails, setSelectedEventDetails] = useState(null);
-  const [showDocument, setShowDocument] = useState(null); // { type: 'agreement'|'invoice', deal }
+  const [selectedEventDeal, setSelectedEventDeal] = useState(null);
+  const [selectedPipelineDeal, setSelectedPipelineDeal] = useState(null);
+  const [showDocument, setShowDocument] = useState(null); // { type: 'agreement'|'invoice', deal }
 
   const [currentUser] = useState(() => JSON.parse(localStorage.getItem("currentUser") || "{}"));
 
@@ -376,6 +382,16 @@ const SponsorDashboard = () => {
     activePipeline === 'events' ? d.deal_type === 'sponsorship' : d.deal_type === 'promotion'
   );
 
+  const getLatestItems = (items, count = 4) =>
+    [...items]
+      .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
+      .slice(0, count);
+
+  const visiblePipelineDeals = filteredDeals.filter((deal) => deal.status !== "rejected");
+  const latestPipelineDeals = getLatestItems(visiblePipelineDeals);
+  const latestEventMarketplace = getLatestItems(filteredEvents);
+  const latestCreatorDiscovery = getLatestItems(filteredInfluencers);
+
   const stats = [
     { 
       title: activePipeline === 'events' ? "Marketplace Events" : "Creator Selection", 
@@ -408,6 +424,72 @@ const SponsorDashboard = () => {
     }
     const platform = deal.campaign?.platform_required || "Multi-platform";
     return `${platform} - Creator Promotion`;
+  };
+
+  const normalizeEventForModal = (eventLike, fallbackOrganizerId) => {
+    if (!eventLike) return null;
+    const hasMappedShape = Object.prototype.hasOwnProperty.call(eventLike, "budget");
+    if (hasMappedShape) {
+      return {
+        ...eventLike,
+        budget: Number(eventLike.budget ?? eventLike.raw_budget ?? 0),
+        organizer_id: Number(eventLike.organizer_id ?? fallbackOrganizerId ?? 0),
+        media_items: Array.isArray(eventLike.media_items) ? eventLike.media_items : [],
+      };
+    }
+    const mapped = mapEventData(eventLike);
+    return {
+      ...mapped,
+      organizer_id: Number(mapped.organizer_id || fallbackOrganizerId || 0),
+    };
+  };
+
+  const openDealEventDetails = (deal) => {
+    const fromDealPayload = normalizeEventForModal(deal?.event, deal?.organizer_id);
+    const fromMarketplaceList = events.find((evt) => Number(evt.id) === Number(deal?.event_id));
+    const eventForModal = fromDealPayload || fromMarketplaceList || null;
+    if (!eventForModal) {
+      toast.error("Event details are unavailable for this deal.");
+      return;
+    }
+    setSelectedEventDetails(eventForModal);
+    setSelectedEventDeal(deal);
+  };
+
+  const openDealProgress = (deal) => {
+    const dealId = Number(deal?.id || 0);
+    if (!dealId) return;
+
+    fetchDeal(dealId)
+      .then((resp) => {
+        const fresh = mapDealData(resp.data, currentUser);
+        setSelectedPipelineDeal(fresh);
+      })
+      .catch(() => {
+        setSelectedPipelineDeal(deal);
+      });
+  };
+
+  useEffect(() => {
+    if (!dealIdFromQuery || !deals.length || selectedPipelineDeal) return;
+    const matched = deals.find((deal) => Number(deal.id) === dealIdFromQuery);
+    if (matched) {
+      openDealProgress(matched);
+    }
+  }, [dealIdFromQuery, deals, selectedPipelineDeal]);
+
+  const closePipelineDealModal = () => {
+    setSelectedPipelineDeal(null);
+    if (searchParams.has("dealId")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("dealId");
+      next.delete("focus");
+      setSearchParams(next, { replace: true });
+    }
+  };
+
+  const goToActivityCenter = (section) => {
+    navigate(`/activity-center?section=${section}&pipeline=${activePipeline}`);
   };
 
   const quickActions = [
@@ -517,41 +599,51 @@ const SponsorDashboard = () => {
           {/* Active Deals Section (Universal) */}
           <section className="dashboard-section-wide">
             <div className="section-header">
-              <h2>Active Pipeline</h2>
-              <span className="badge">{deals.length} Active Deals</span>
+              <h2>
+                <button type="button" className="section-nav-link" onClick={() => goToActivityCenter("pipeline")}>
+                  Active Pipeline
+                </button>
+              </h2>
+              <span className="badge">{visiblePipelineDeals.length} Active Deals</span>
             </div>
             <div className="horizontal-scroll-container">
               <div className="deal-pipeline-grid">
-                {deals.filter(d => {
-                  if (activePipeline === 'events') return d.deal_type === 'sponsorship';
-                  return d.deal_type === 'promotion';
-                }).filter(d => d.status !== 'rejected').map(deal => (
+                {latestPipelineDeals.map(deal => (
                   <DealCard key={deal.id} deal={deal}>
                     <div className="deal-card-content-wide">
-                      <div className="deal-type-chip">
-                        {deal.deal_type === "sponsorship" ? "Event Deal" : "Creator Deal"}
+                      <div className="pipeline-card-head">
+                        <div className="deal-type-chip">
+                          {deal.deal_type === "sponsorship" ? "Event Deal" : "Creator Deal"}
+                        </div>
+                        <h4 className="deal-organizer-name">
+                          {deal.deal_type === 'sponsorship' ? (
+                            <span
+                              className="profile-link"
+                              onClick={() => navigate(`/profile/${deal.organizer_id}`)}
+                              title="View Profile"
+                            >
+                              {getDealPartnerName(deal)}
+                            </span>
+                          ) : (
+                            <span
+                              className="profile-link"
+                              onClick={() => navigate(`/profile/${deal.influencer_id}`)}
+                              title="View Profile"
+                            >
+                              {getDealPartnerName(deal)}
+                            </span>
+                          )}
+                        </h4>
+                        <button
+                          type="button"
+                          className="pipeline-activity-link"
+                          onClick={() => openDealProgress(deal)}
+                          title="Open activity progress"
+                        >
+                          {getDealSubject(deal)}
+                        </button>
+                        <p className="deal-context-line">{getDealSubline(deal)}</p>
                       </div>
-                      <h4 className="deal-organizer-name">
-                        {deal.deal_type === 'sponsorship' ? (
-                          <span
-                            className="profile-link"
-                            onClick={() => navigate(`/profile/${deal.organizer_id}`)}
-                            title="View Profile"
-                          >
-                            {getDealPartnerName(deal)}
-                          </span>
-                        ) : (
-                          <span
-                            className="profile-link"
-                            onClick={() => navigate(`/profile/${deal.influencer_id}`)}
-                            title="View Profile"
-                          >
-                            {getDealPartnerName(deal)}
-                          </span>
-                        )}
-                      </h4>
-                      <p className="deal-subject-line">{getDealSubject(deal)}</p>
-                      <p className="deal-context-line">{getDealSubline(deal)}</p>
                       <div className="deal-meta-row">
                         <span className="deal-meta-item">
                           Value: {formatCurrency(Number(deal.paymentAmount) || Number(deal.event?.raw_budget) || Number(deal.campaign?.budget) || 0)}
@@ -574,24 +666,7 @@ const SponsorDashboard = () => {
                         {deal.status === "payment_pending" && !deal.paymentDone && (
                           <button className="mini-action-btn payment" onClick={() => handleStartPayment(deal)}>Pay</button>
                         )}
-                        <button
-                          className="mini-action-btn legal"
-                          disabled={!deal.paymentDone || deal.sponsorSigned}
-                          onClick={() => deal.paymentDone && !deal.sponsorSigned && handleStartSigning(deal)}
-                        >
-                          Sign
-                        </button>
-                        
-                        <div className="doc-buttons-group">
-                            {deal.sponsorSigned && (
-                                <button className="mini-action-btn legal-outline" onClick={() => setShowDocument({ type: 'agreement', deal })}>Agreement</button>
-                            )}
-                            {deal.paymentDone && (
-                                <button className="mini-action-btn primary-outline" onClick={() => setShowDocument({ type: 'invoice', deal })}>Invoice</button>
-                            )}
-                        </div>
-
-                        {deal.status === 'closed' && (
+                        {deal.status === "closed" ? (
                           reviewedDeals[deal.id] ? (
                             <div className="reviewed-badge">
                               {Array.from({ length: 5 }, (_, i) => (
@@ -610,6 +685,22 @@ const SponsorDashboard = () => {
                               Review
                             </button>
                           )
+                        ) : (
+                          <button
+                            className="mini-action-btn legal"
+                            disabled={!deal.paymentDone || deal.sponsorSigned}
+                            onClick={() => deal.paymentDone && !deal.sponsorSigned && handleStartSigning(deal)}
+                          >
+                            Sign
+                          </button>
+                        )}
+                      </div>
+                      <div className="pipeline-main-actions">
+                        {deal.sponsorSigned && (
+                          <button className="mini-action-btn legal-outline" onClick={() => setShowDocument({ type: "agreement", deal })}>Agreement</button>
+                        )}
+                        {deal.paymentDone && (
+                          <button className="mini-action-btn primary-outline invoice-btn" onClick={() => setShowDocument({ type: "invoice", deal })}>Invoice</button>
                         )}
                         <button className="mini-action-btn chat" onClick={() => setActiveDealChat(deal)}>
                           Chat with {deal.deal_type === "sponsorship" ? "Organizer" : "Creator"}
@@ -618,10 +709,7 @@ const SponsorDashboard = () => {
                     </div>
                   </DealCard>
                 ))}
-                {deals.filter(d => {
-                  if (activePipeline === 'events') return d.deal_type === 'sponsorship';
-                  return d.deal_type === 'promotion';
-                }).length === 0 && (
+                {visiblePipelineDeals.length === 0 && (
                   <EmptyState
                     title="No active deals yet"
                     description="Create a proposal to start your pipeline."
@@ -637,7 +725,15 @@ const SponsorDashboard = () => {
             <div className="section-header marketplace-header-row">
               <div className="section-title-group">
                 <div className="title-with-action">
-                  <h2>{activePipeline === 'events' ? 'Event Marketplace' : 'Creator Discovery'}</h2>
+                  <h2>
+                    <button
+                      type="button"
+                      className="section-nav-link"
+                      onClick={() => goToActivityCenter(activePipeline === "events" ? "events" : "discovery")}
+                    >
+                      {activePipeline === "events" ? "Event Marketplace" : "Creator Discovery"}
+                    </button>
+                  </h2>
                   <button 
                     className={`filter-toggle-btn ${showFilters ? 'active' : ''}`}
                     onClick={() => setShowFilters(!showFilters)}
@@ -691,7 +787,7 @@ const SponsorDashboard = () => {
             
             {activePipeline === 'events' ? (
               <div className="event-horizontal-grid">
-                {filteredEvents.map(event => {
+                {latestEventMarketplace.map(event => {
                   const deal = deals.find(d => Number(d.event_id) === Number(event.id));
                   return (
                     <div key={event.id} className="event-card-modern" onClick={() => setSelectedEventDetails(event)} style={{ cursor: "pointer" }}>
@@ -728,7 +824,7 @@ const SponsorDashboard = () => {
               </div>
             ) : (
               <div className="creator-horizontal-grid">
-                {filteredInfluencers.map(inf => {
+                {latestCreatorDiscovery.map(inf => {
                   const deal = deals.find(d => Number(d.influencer_id) === Number(inf.id));
                   return (
                     <div key={inf.id} className="creator-card-modern">
@@ -826,7 +922,7 @@ const SponsorDashboard = () => {
                   onClick={() => setSelectedCampaignId(String(c.id))}
                 >
                   <p className="campaign-name">{c.title}</p>
-                  <p className="campaign-meta">{c.deliverables} Ã¢â‚¬Â¢ {formatCurrency(c.budget)}</p>
+                  <p className="campaign-meta">{c.deliverables} | {formatCurrency(c.budget)}</p>
                 </div>
               ))}
               {myCampaigns.length === 0 && (
@@ -874,11 +970,48 @@ const SponsorDashboard = () => {
         />
       )}
 
+      {selectedPipelineDeal && (
+        <ActivityProgressModal
+          deal={selectedPipelineDeal}
+          role="sponsor"
+          isReviewed={Boolean(reviewedDeals[selectedPipelineDeal.id])}
+          onClose={closePipelineDealModal}
+          onOpenDetails={selectedPipelineDeal.deal_type === "sponsorship" ? () => openDealEventDetails(selectedPipelineDeal) : null}
+          actions={{
+            accept: !selectedPipelineDeal.sponsorAccepted
+              ? () => handleDealAction(selectedPipelineDeal.id, acceptDeal, { role: "sponsor", accept: true })
+              : null,
+            pay:
+              selectedPipelineDeal.status === "payment_pending" && !selectedPipelineDeal.paymentDone
+                ? () => handleStartPayment(selectedPipelineDeal)
+                : null,
+            sign:
+              selectedPipelineDeal.paymentDone && !selectedPipelineDeal.sponsorSigned
+                ? () => handleStartSigning(selectedPipelineDeal)
+                : null,
+            review:
+              selectedPipelineDeal.status === "closed" && !reviewedDeals[selectedPipelineDeal.id]
+                ? () => {
+                    setReviewDeal(selectedPipelineDeal);
+                    setShowReviewModal(true);
+                  }
+                : null,
+            agreement: selectedPipelineDeal.sponsorSigned ? () => setShowDocument({ type: "agreement", deal: selectedPipelineDeal }) : null,
+            invoice: selectedPipelineDeal.paymentDone ? () => setShowDocument({ type: "invoice", deal: selectedPipelineDeal }) : null,
+            chat: () => setActiveDealChat(selectedPipelineDeal),
+          }}
+          formatCurrency={formatCurrency}
+        />
+      )}
+
       {selectedEventDetails && (
         <EventDetailModal
           event={selectedEventDetails}
-          deal={deals.find(d => Number(d.event_id) === Number(selectedEventDetails.id))}
-          onClose={() => setSelectedEventDetails(null)}
+          deal={selectedEventDeal || deals.find(d => Number(d.event_id) === Number(selectedEventDetails.id))}
+          onClose={() => {
+            setSelectedEventDetails(null);
+            setSelectedEventDeal(null);
+          }}
           onProposeDeal={handleProposeDeal}
           onChat={setActiveDealChat}
           formatCurrency={formatCurrency}

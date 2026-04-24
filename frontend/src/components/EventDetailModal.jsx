@@ -12,11 +12,11 @@ const EventDetailModal = ({ event, deal, onClose, onProposeDeal, onChat, formatC
   if (!event) return null;
 
   const categoryColors = {
-    Tech: "#6366f1", Music: "#ec4899", Sports: "#10b981",
-    Business: "#f59e0b", Education: "#06b6d4", Art: "#a855f7",
-    Social: "#14b8a6", Other: "#64748b", "Global Event": "#6366f1"
+    Tech: "#f97316", Music: "#ec4899", Sports: "#10b981",
+    Business: "#f59e0b", Education: "#0ea5e9", Art: "#ea580c",
+    Social: "#14b8a6", Other: "#94a3b8", "Global Event": "#f97316"
   };
-  const catColor = categoryColors[event.category] || "#6366f1";
+  const catColor = categoryColors[event.category] || "#f97316";
 
   return (
     <div className="edm-backdrop" onClick={onClose}>

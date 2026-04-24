@@ -1,0 +1,385 @@
+# 🚀 Sponsorship Hub — Full Startup & Code Audit Report
+
+> **Scanned:** April 22, 2026  
+> **Scope:** Full codebase — Backend (FastAPI, SQLAlchemy, 20 routers), Frontend (React/Vite, 13 pages), Database models, Schemas, Auth, Payments, Integrations, Billing  
+> **Verdict Summary:** ✅ Real startup potential — with defined improvements
+
+---
+
+## PART 1: STARTUP POTENTIAL VALIDATION
+
+### 🟢 Verdict: YES — This has strong startup potential
+
+Here is the honest analysis:
+
+### Why it qualifies as a real startup idea:
+
+| Signal | Evidence in Codebase |
+|--------|---------------------|
+| **Clear problem solved** | Sponsorships today happen via email chains, WhatsApp, Excel sheets. No structured platform exists in India for this 3-party flow (Sponsor ↔ Organizer ↔ Influencer). |
+| **3-sided marketplace** | Rare and defensible. Your deal state machine handles all 3 party types correctly (sponsorship vs. promotion deal types). |
+| **Revenue model already built** | Billing tiers (free/starter/growth/enterprise), Razorpay integration, milestone payouts, BillingEvent tracking — these are not toy features. |
+| **Trust & compliance layer** | KYC with risk flags, audit events, token reuse detection, verification badges — you have thought beyond MVP. |
+| **Real workflow depth** | Deal proposal → acceptance → payment → signing → closing → review → dispute → resolution. Very few no-code/low-code platforms handle this end-to-end. |
+| **Comparable players** | Globally: Sponseasy, SponsorPitch (US-focused). India: **No structured platform exists.** This is the gap. |
+
+### What makes it unique in the Indian market:
+1. **India-first** — INR, Razorpay, Aadhaar/PAN/GST KYC, Indian event ecosystem
+2. **Multi-role marketplace** — Not just "find a sponsor." You handle the full deal lifecycle.
+3. **B2B SaaS revenue model** — Workspace teams, plan limits, enterprise tiers
+4. **Trust infrastructure** — Risk flags, KYC, audit trail — critical for financial transactions
+
+### Honest limitations right now:
+- No AI-based sponsor-event matching (currently designed but not implemented)
+- No mobile app
+- No verified actual HubSpot/Slack OAuth integrations (currently simulated)
+- Billing plan upgrades are simulated, not real payment flows
+- Email verification flow requires working SMTP (not configured by default)
+
+---
+
+## PART 2: GO-TO-MARKET STRATEGY — HOW TO DISTRIBUTE THIS PRODUCT
+
+### Phase 1: Pre-Launch (Month 1–2)
+1. **Fix the critical bugs listed in Part 4** (especially the payment amount bug)
+2. **Configure real SMTP** (use Resend.com or SendGrid free tier) for email verification
+3. **Create a compelling landing page** with a waitlist form
+4. **Record a 60-second demo video** of the full deal flow (propose → pay → sign → close)
+5. **Deploy**: Backend on Render.com (free tier), Frontend on Vercel (already configured)
+
+### Phase 2: Community Launch (Month 2–3)
+1. **Target: College tech fest organizers** — they desperately need sponsor outreach tools
+2. **Post on LinkedIn**: "I built a platform that manages the entire sponsorship deal lifecycle. Here's the problem it solves: [demo video]"
+3. **Submit to Product Hunt** — "The platform that makes sponsorship deals as easy as signing a contract"
+4. **Partner with 3–5 college event committees** as free beta users
+5. **Create a "Sponsor Discovery" page** listing upcoming events (drives organic sponsor traffic)
+
+### Phase 3: Traction & Paid Conversion (Month 3–6)
+1. **Freemium → Paid**: Free plan lets organizers create 2 events, sponsors browse. Growth plan unlocks unlimited.
+2. **Target small marketing agencies** managing influencer campaigns — they need the workspace/team features.
+3. **Reach out to startup incubators** (IIT/NIT/BITS) to use the platform for their demo day sponsorships.
+4. **Charge platform fee** (2–5%) on deals processed through the platform instead of/in addition to subscription.
+5. **List on startup directories**: Crunchbase, AngelList, Tracxn
+
+### Phase 4: Scale (Month 6–12)
+1. Launch **mobile-first PWA** (progressive web app wrapper)
+2. Build **AI matching engine** (already designed in your project context)
+3. Add **verified sponsor database** (brands can list themselves and their sponsorship preferences)
+4. Explore **Series A** after 100 active deals/month
+
+---
+
+## PART 3: GRAND FEATURE ADDITIONS
+
+These features are **contextually relevant** to your application and would significantly elevate it:
+
+### 🔴 High Priority (Missing Core Features)
+| # | Feature | Why It's Critical |
+|---|---------|------------------|
+| 1 | **AI Sponsor-Event Matching** | You have the roadmap entry but zero implementation. Matching based on niche, geo, budget, audience_size is your biggest differentiator. |
+| 2 | **Deal Amount Negotiation UI** | Currently deal has `payment_amount` but there's **no API endpoint to set it before payment**. Users cannot specify deal value at creation time. |
+| 3 | **Email Notification on Deal Actions** | KYC sends nothing. Signing sends nothing. Only in-app notifications exist. Email is mandatory for trust. |
+| 4 | **Onboarding Checklist Flow** | You have `LifecycleNudge` model but no guided first-time-user flow showing "Create your first event → invite a sponsor → propose a deal." |
+| 5 | **Admin Dashboard Panel** | Your code checks for `role == "admin"` everywhere (KYC review, trust management) but there's **no admin user creation flow and no admin frontend page**. |
+
+### 🟡 Medium Priority (Differentiators)
+| # | Feature | Why It Adds Value |
+|---|---------|------------------|
+| 6 | **Public Sponsor/Event Discovery Feed** | A search page where sponsors can find events and organizers can discover brands — the core of a marketplace. |
+| 7 | **Digital Contract PDF Export** | Generate a signed contract PDF at deal close (with signature text, amounts, parties). Huge trust signal. |
+| 8 | **Influencer Media Kit** | Auto-generate a shareable profile card (audience size, platforms, niche, past deals, trust score) that influencers can share with sponsors. |
+| 9 | **In-app Deal Chat with File Attachments** | Current chat is text-only. Allowing sponsors to send contract drafts/media briefs in chat is critical. |
+| 10 | **Two-Factor Authentication (2FA)** | Important for a financial platform handling deals and payments. |
+
+### 🟢 Expansion Features (Future)
+| # | Feature |
+|---|---------|
+| 11 | Mobile PWA with push notifications |
+| 12 | Real HubSpot OAuth integration (currently simulated) |
+| 13 | Multi-currency support (currently only INR) |
+| 14 | Sponsor ROI analytics (reach, engagement metrics linked to deal) |
+| 15 | Automated tax invoice generation (GST-compliant) for Indian market |
+
+---
+
+## PART 4: BUG REPORT — LOGICAL, BUSINESS & CODE PROBLEMS
+
+> Severity: 🔴 Critical | 🟠 Major | 🟡 Moderate | 🟢 Minor
+
+---
+
+### 🔴 CRITICAL BUGS
+
+---
+
+#### BUG-001: Deal payment_amount is never set — payment will always be ₹0
+**File:** `backend/crud.py` — `create_deal()` | `backend/routers/payments.py` — `create_razorpay_order()`  
+**Severity:** 🔴 Critical  
+**Problem:** When a deal is created via `POST /deals/`, `payment_amount` is never set — it defaults to `0` (from the model `default=0`). The `create_razorpay_order` endpoint explicitly checks `if deal_amount <= 0: raise ValidationError`. This means **every deal payment will fail** because the deal amount is always zero.  
+**Root Cause:** `DealCreate` schema has no `payment_amount` field. There is no API endpoint for the sponsor to set the agreed amount before triggering payment.  
+**Fix Required:** Add a `payment_amount` field to `DealCreate` schema OR add a dedicated endpoint `PUT /deals/{id}/set-amount` before the payment step. The deal acceptance flow should also confirm the amount both parties agree on.
+
+---
+
+#### BUG-002: Billing plan change is completely simulated — no actual payment
+**File:** `backend/routers/billing.py` — `change_my_plan()`  
+**Severity:** 🔴 Critical  
+**Problem:** The `status` field in `BillingEvent` is hardcoded to `"simulated"`. A user can click "Upgrade to Growth Plan" and it upgrades immediately without any payment. There is no Razorpay integration for subscription billing.  
+**Business Impact:** The entire monetization model is currently non-functional.  
+**Fix Required:** Integrate Razorpay Subscription API or at minimum gate the plan upgrade behind a one-time payment order confirmation.
+
+---
+
+#### BUG-003: KYC document upload is URL-only — no actual file storage
+**File:** `backend/routers/trust.py` — `submit_kyc()` | `backend/schemas.py` — `KYCSubmissionCreate`  
+**Severity:** 🔴 Critical  
+**Problem:** `document_url` in KYC submission is an optional string — the user is expected to provide a URL to their own document. There's no file upload endpoint, no S3/cloud storage integration, and no validation that the URL points to a real document. Users could submit fake URLs or leave it empty.  
+**Fix Required:** Add a `POST /trust/kyc/upload-document` endpoint with file upload support (multipart/form-data) using a cloud storage service (AWS S3, Cloudinary, or Firebase Storage).
+
+---
+
+#### BUG-004: `hmac.new()` is not a valid function — it should be `hmac.new()` → `hmac.new()`  
+**File:** `backend/auth.py` — `hash_token()` function (line 38)  
+**Severity:** 🔴 Critical  
+**Problem:** `hmac.new(...)` **does not exist** in Python's `hmac` module. The correct function is `hmac.new()` only exists in some older contexts. In Python 3, the correct call is:
+```python
+hmac.new(key, msg, digestmod)  # WRONG — doesn't exist
+# Should be:
+hmac.HMAC(key, msg, digestmod).hexdigest()
+# OR
+import hmac; hmac.new(key, msg, digestmod)  # also wrong
+```
+The correct Python 3 API is: `hmac.new(key, msg, digestmod=hashlib.sha256)` actually **does exist** but `hmac` module's `new()` function signature is `hmac.new(key[, msg[, digestmod]])`. Let me re-examine:
+
+**Actual Code:** `hmac.new(SECRET_KEY.encode("utf-8"), token.encode("utf-8"), hashlib.sha256).hexdigest()`  
+**Verdict:** `hmac.new()` IS valid in Python 3 (it returns an HMAC object). However it also appears in `payments.py` line 176 as `hmac.new(...)` which IS correct. **This bug is actually a FALSE POSITIVE** — `hmac.new()` is valid. ✅ Retract this.
+
+---
+
+#### BUG-004 (revised): Webhook signature validation uses `hmac.new()` but the correct function name varies
+**File:** `backend/routers/payments.py` — line 176  
+**Code:** `hmac.new(webhook_secret.encode("utf-8"), payload_body, hashlib.sha256).hexdigest()`  
+**Severity:** 🟠 Major  
+**Problem:** `hmac.new()` is valid Python but this is not idiomatic. More importantly, the signature uses `hmac.new()` and returns `.hexdigest()`. Razorpay's actual signature is HMAC-SHA256. The comparison against `x_razorpay_signature` is correct. **The actual bug is**: if `webhook_secret` is not set in development, the entire webhook validation is skipped (line 189) — meaning in dev anyone can send fake webhook events and trigger payment state changes. This is a security issue in testing/staging environments.
+
+---
+
+#### BUG-005: Deal deletion is allowed regardless of deal state
+**File:** `backend/routers/deals.py` — `delete_deal()` | `backend/crud.py` — `delete_deal()`  
+**Severity:** 🔴 Critical (Business Logic)  
+**Problem:** Any deal participant can delete a deal at **any status** — including `signing_pending`, `closed`, or `payment_pending`. A sponsor who loses a deal can simply delete it after payment has been initiated or signing has started.  
+**Fix Required:** Add state validation: deals can only be deleted in `proposed` or `rejected` status. All other states should block deletion.
+
+---
+
+### 🟠 MAJOR BUGS
+
+---
+
+#### BUG-006: Role-based access on `DELETE /deals/{id}` does not check if user is the initiator
+**File:** `backend/routers/deals.py` — `delete_deal()` (line 221)  
+**Severity:** 🟠 Major  
+**Problem:** Any participant in the deal (sponsor, organizer, or influencer) can delete the deal, not just the initiator. If a sponsor proposes a deal, the organizer should not be able to delete it unilaterally.  
+**Fix Required:** Only the party who created the deal (`creator_id` or the party who is not yet linked) OR an admin should be able to delete.
+
+---
+
+#### BUG-007: `CampaignCreate` exposes `creator_id` as client input — IDOR risk
+**File:** `backend/schemas.py` — `CampaignCreate` (line 167) | `backend/routers/campaigns.py`  
+**Severity:** 🟠 Major  
+**Problem:** `CampaignCreate` schema includes `creator_id: int` as a client-provided field. This means a user can set `creator_id` to any other user's ID and create campaigns on their behalf (Insecure Direct Object Reference).  
+**Fix Required:** Remove `creator_id` from the request schema. Set it server-side from `current_user.id` in the router.
+
+---
+
+#### BUG-008: `EventCreate` exposes `organizer_id` as client input — IDOR risk
+**File:** `backend/schemas.py` — `EventCreate` (line 201)  
+**Severity:** 🟠 Major  
+**Problem:** Same issue as BUG-007. Any authenticated user can create an event attributed to another organizer by passing any `organizer_id`.  
+**Fix Required:** Remove `organizer_id` from the request schema. Set server-side.
+
+---
+
+#### BUG-009: `ReviewCreate` exposes `reviewer_id` as client input — identity spoofing
+**File:** `backend/schemas.py` — `ReviewCreate` | `ReviewBase` (line 231)  
+**Severity:** 🟠 Major  
+**Problem:** The `reviewer_id` is provided by the client. A user can impersonate another reviewer by passing a different user's ID. The CRUD function uses this client-provided ID to record who wrote the review.  
+**Fix Required:** Remove `reviewer_id` from the request body. Derive it from `current_user.id` in the router.
+
+---
+
+#### BUG-010: Review can be submitted on a deal that is NOT closed
+**File:** `backend/routers/reviews.py` | `backend/crud.py` — `create_review()`  
+**Severity:** 🟠 Major  
+**Problem:** There is no check that the deal is in `closed` status before a review is submitted. Users can leave reviews on deals that are still `proposed` or `payment_pending`, which makes no business sense.  
+**Fix Required:** In `create_review()`, verify `deal.status == "closed"` before allowing review creation.
+
+---
+
+#### BUG-011: Deal signing allows a payment-pending deal to be signed without payment
+**File:** `backend/crud.py` — `deal_sign()` (lines 302–304)  
+**Severity:** 🟠 Major  
+**Problem:** Line 303: `signable_states = {"signing_pending", "payment_pending"}` — signing is allowed when the deal is still in `payment_pending` state. This means parties can sign without payment having been completed, bypassing the intended flow: pay first → then sign.  
+**Fix Required:** Remove `"payment_pending"` from `signable_states`. Only allow signing in `signing_pending` (which means payment is done).
+
+---
+
+#### BUG-012: User model stores `refresh_token` as a hash but full token is stored in some paths
+**File:** `backend/routers/auth_router.py` — `refresh_token()` (line 208)  
+**Severity:** 🟠 Major  
+**Problem:** The refresh token is stored as a **hash** (`hash_token(refresh_token)`), and this is correctly verified. However, the `TokenRefreshRequest` schema allows passing the refresh token in the **request body** (`payload.refresh_token`), bypassing the cookie-based CSRF check. A stolen token from a network intercept could be used directly in the body.  
+**Note:** This is by design for API clients, but there's no rate-limiting difference between cookie-auth (CSRF-protected) and body-auth. Body-based refresh should also be limited aggressively.
+
+---
+
+#### BUG-013: Billing plan limit enforcement is completely absent
+**File:** `backend/routers/events.py`, `backend/routers/campaigns.py`, `backend/routers/deals.py`  
+**Severity:** 🟠 Major  
+**Problem:** The `PLAN_DEFINITIONS` define limits (e.g., free plan: 2 events, 1 campaign, 5 deals). However, **zero enforcement exists** in any router. A free user can create unlimited events, campaigns, and deals.  
+**Fix Required:** Add a plan limit check middleware or guard in each creation endpoint that queries the monthly usage and compares against the plan.
+
+---
+
+#### BUG-014: `integrations.py` sync endpoints are fully simulated — HubSpot/Slack do nothing
+**File:** `backend/routers/integrations.py` — `sync_provider()` (lines 145–158)  
+**Severity:** 🟠 Major (Business)  
+**Problem:** All provider syncs return hardcoded fake responses. HubSpot doesn't actually create a contact/deal. Slack doesn't send a real message. Email doesn't send anything. The frontend shows "Integration connected" but zero real integration happens.  
+**Fix Required:** Either remove integrations from the UI (to avoid misleading users) OR implement actual OAuth + API calls.
+
+---
+
+### 🟡 MODERATE BUGS
+
+---
+
+#### BUG-015: `deleted_at` soft-delete field is on `User` and `Event` but never checked in queries
+**File:** `backend/models.py` — `User` (line 70), `Event` (line 125)  
+**Severity:** 🟡 Moderate  
+**Problem:** Both `User` and `Event` have `deleted_at` columns suggesting soft delete, but **no query filters on `deleted_at IS NULL`**. Soft-deleted users/events are still returned in all list endpoints.  
+**Fix Required:** Either implement SQLAlchemy's `FilteredQuery` with `where(deleted_at == None)` globally, or remove `deleted_at` and use hard delete (which the events router does with `db.delete()`).
+
+---
+
+#### BUG-016: `trust_score` is computed from average rating but has no boundary validation
+**File:** `backend/crud.py` — `create_review()` (lines 365–370)  
+**Severity:** 🟡 Moderate  
+**Problem:** Trust score is recalculated as `float(avg_rating)` from reviews. But the `DealReview.rating` field has no `CheckConstraint` to enforce `1–5` range. A user could submit a rating of `999` or `-1` (if the API is called directly), which would corrupt the trust score.  
+**Fix Required:** Add `CheckConstraint('rating >= 1 AND rating <= 5')` to `DealReview` model, and add a validator in `ReviewBase` schema.
+
+---
+
+#### BUG-017: WebSocket notifications send to ALL participants but actor is excluded incorrectly
+**File:** `backend/routers/deals.py` — `_notify_participants()` (line 63)  
+**Severity:** 🟡 Moderate  
+**Problem:** `actor_id = actor_user_id if actor_user_id is not None else -1` — if `actor_user_id` is `None`, the actor ID becomes `-1`, which would never match any real user. This is defensive but could mask a caller that passes `None` when they shouldn't. More importantly, `_signal_participants_refresh` (line 70) notifies **all participants including the actor**, which can cause unnecessary UI refreshes for the user who just performed the action.
+
+---
+
+#### BUG-018: `datetime.utcnow()` used inconsistently — `func.now()` vs `datetime.utcnow()`
+**File:** `backend/models.py` — `DealReview` (line 192), `backend/crud.py`, multiple routers  
+**Severity:** 🟡 Moderate  
+**Problem:** Most model fields use `server_default=func.now()` (correct — database-level), but `DealReview.created_at` uses `default=datetime.utcnow` (application-level). This is inconsistent and can cause timezone drift issues. Additionally, `datetime.utcnow()` is deprecated in Python 3.12+.  
+**Fix Required:** Standardize on `server_default=func.now()` for all timestamp columns, or use `datetime.now(timezone.utc)` for application-level timestamps.
+
+---
+
+#### BUG-019: Password reset new_password has no strength validation
+**File:** `backend/routers/auth_router.py` — `reset_password()` | `backend/schemas.py` — `PasswordResetConfirm`  
+**Severity:** 🟡 Moderate  
+**Problem:** `PasswordResetConfirm` has a `new_password: str` field with no validators. The registration endpoint enforces password strength (8 chars, 1 digit, 1 uppercase), but the reset endpoint allows any string including `"a"` as a new password.  
+**Fix Required:** Add the same `@validator("new_password")` as in `UserCreate.password_strength` to `PasswordResetConfirm`.
+
+---
+
+#### BUG-020: `get_events()` and `get_campaigns()` in crud.py are not used anywhere — dead code
+**File:** `backend/crud.py` — lines 59–60, 98–99  
+**Severity:** 🟡 Moderate  
+**Problem:** `get_events()` and `get_campaigns()` exist in crud.py but are not called by any router — all routers query directly. These are dead functions that could mislead future developers.
+
+---
+
+#### BUG-021: `ACCESS_TOKEN_EXPIRE_MINUTES=15` is very short — causes frequent re-login
+**File:** `backend/config.py` (line 15), `backend/.env` (README line 78)  
+**Severity:** 🟡 Moderate  
+**Problem:** 15-minute access token expiry means users will be logged out very frequently if the silent refresh isn't implemented correctly on the frontend. There's no evidence the frontend handles 401 errors by silently refreshing the token before showing the login screen.  
+**Fix Required:** Verify the frontend API interceptor calls `POST /auth/refresh` on 401 before redirecting to login.
+
+---
+
+#### BUG-022: No validation that deal participants actually exist in the database at creation time
+**File:** `backend/crud.py` — `create_deal()` | `backend/routers/deals.py` — `create_deal()`  
+**Severity:** 🟡 Moderate  
+**Problem:** When creating a deal with `sponsor_id`, `organizer_id`, or `influencer_id`, there is no check that these user IDs actually exist. The deal is created with dangling foreign keys. SQLAlchemy will enforce the FK constraint at DB level, but the error message returned will be a generic 500 rather than a clear validation error.  
+**Fix Required:** Query each participant ID before creating the deal and raise a clear `ValidationError` if not found.
+
+---
+
+### 🟢 MINOR BUGS
+
+---
+
+#### BUG-023: README markdown is broken — missing code block formatting
+**File:** `README.md`  
+**Severity:** 🟢 Minor  
+**Problem:** The README file has broken markdown formatting — code blocks are not properly fenced (missing triple backticks on most sections). The file renders as plain text on GitHub, making it look unprofessional for a startup.
+
+---
+
+#### BUG-024: `ScaleOpsPage.jsx` is 48KB — massive single file, likely a performance issue
+**File:** `frontend/src/pages/ScaleOpsPage.jsx` (48,482 bytes)  
+**Severity:** 🟢 Minor  
+**Problem:** At 48KB, this single component file is enormous. It likely renders conditionally based on user role and contains all 3 dashboard variants. This slows initial parse time and makes the code hard to maintain.  
+**Fix Required:** Split into role-specific sub-components.
+
+---
+
+#### BUG-025: No `404` route in the frontend router
+**File:** `frontend/src/App.jsx`  
+**Severity:** 🟢 Minor  
+**Problem:** There is no catch-all `<Route path="*">` that renders a 404 page. Navigating to any unknown path shows a blank page.
+
+---
+
+#### BUG-026: `verification_token_preview` is returned in production registration response
+**File:** `backend/routers/auth_router.py` — `register()` (line 307)  
+**Severity:** 🟢 Minor (Dev tooling)  
+**Problem:** `"verification_token_preview": None if is_production else verification_token` — In non-production, the raw verification token is returned in the API response. This is intentional for development, but if someone accidentally deploys with `ENV=development` to a public server, real users' verification tokens are exposed.
+
+---
+
+#### BUG-027: Influencer `platforms` field is a plain String — no structured validation
+**File:** `backend/models.py` — `User.platforms` (line 57) | `backend/schemas.py` — `UserBase.platforms`  
+**Severity:** 🟢 Minor  
+**Problem:** `platforms` is stored as a single `String(300)` — presumably comma-separated. This makes querying ("find all influencers on YouTube") impossible without LIKE queries. The `platform_required` on `Campaign` has the same issue.  
+**Fix Required:** Use a JSON or array column for platforms, or at minimum a separate `UserPlatform` table.
+
+---
+
+#### BUG-028: Calendar `.ics` export uses hardcoded `09:00–17:00` times
+**File:** `backend/routers/integrations.py` — `export_calendar_ics()` (lines 300–301)  
+**Severity:** 🟢 Minor  
+**Problem:** `start = f"{event.date.strftime('%Y%m%d')}T090000Z"` — all events are exported with a fixed 9AM–5PM time window regardless of the actual event time. Events don't have a time field in the model, but the ICS export should at minimum use a full-day event (`DATE` not `DATETIME`).
+
+---
+
+## SUMMARY DASHBOARD
+
+| Severity | Count | Examples |
+|----------|-------|---------|
+| 🔴 Critical | 3 | Deal amount always ₹0, Billing is simulated, Deal can be deleted at any state |
+| 🟠 Major | 9 | IDOR on campaign/event/review creation, No plan limit enforcement, Signing without payment |
+| 🟡 Moderate | 8 | No password strength on reset, Soft-delete not applied, UTC inconsistency |
+| 🟢 Minor | 6 | No 404 page, ScaleOpsPage size, Broken README |
+| **Total** | **26** | |
+
+---
+
+## QUICK WIN PRIORITY FIX LIST
+
+Fix these 5 things first — they are blockers for any real user:
+
+1. **BUG-001** — Set `payment_amount` on deal creation
+2. **BUG-007/008/009** — Remove IDOR fields from Campaign/Event/Review create schemas
+3. **BUG-010** — Block reviews on non-closed deals
+4. **BUG-013** — Enforce billing plan limits in routers
+5. **BUG-019** — Add password strength check to reset endpoint

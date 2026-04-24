@@ -36,7 +36,7 @@
 .review-modal-header h2 {
   font-size: 24px;
   margin-bottom: 8px;
-  background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong), #ec4899);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -140,7 +140,7 @@
   width: 100%;
   margin-top: 30px;
   padding: 14px;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: var(--primary-gradient);
   border: none;
   border-radius: 12px;
   color: white;
@@ -151,7 +151,7 @@
 
 .submit-review-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 10px 20px hsla(var(--color-primary), 0.3);
 }
 
 .submit-review-btn:disabled {

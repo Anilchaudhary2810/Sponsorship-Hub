@@ -35,7 +35,7 @@ const PrivateRoute = ({ role, children }) => {
           alignItems: "center",
           justifyContent: "center",
           fontSize: "18px",
-          color: "#64748b",
+          color: "var(--muted-foreground)",
         }}
       >
         Loading...

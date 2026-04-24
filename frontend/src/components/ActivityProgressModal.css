@@ -1,0 +1,193 @@
+.activity-progress-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3700;
+  background: rgba(2, 6, 23, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.activity-progress-card {
+  width: min(760px, 96vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  border-radius: 22px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 28px 70px rgba(var(--shadow-color), 0.34);
+  padding: 22px;
+  position: relative;
+}
+
+.activity-progress-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--input);
+  color: var(--foreground);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.activity-progress-eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary-strong);
+}
+
+.activity-progress-title {
+  margin: 8px 0 4px;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.activity-progress-subtitle {
+  margin: 0 0 12px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.activity-progress-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.activity-progress-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--input);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+
+.activity-progress-track-wrap {
+  margin-top: 16px;
+}
+
+.activity-progress-track {
+  height: 12px;
+  background: var(--muted);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.activity-progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--primary-gradient);
+  transition: width 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.activity-progress-percent {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-strong);
+}
+
+.activity-progress-step-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.activity-progress-step {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--input);
+  padding: 12px;
+}
+
+.activity-progress-step.done {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.activity-progress-step-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.activity-progress-step-label {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.activity-progress-step-helper {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.activity-progress-step-btn {
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in oklab, var(--primary) 45%, var(--border) 55%);
+  background: hsla(var(--color-primary), 0.12);
+  color: var(--primary-strong);
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.activity-progress-footer-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.activity-progress-aux-btn {
+  border: 1px solid var(--border);
+  background: var(--input);
+  color: var(--foreground);
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.activity-progress-aux-btn.primary {
+  background: var(--primary-gradient);
+  color: #fff;
+  border-color: transparent;
+}
+
+@media (max-width: 640px) {
+  .activity-progress-card {
+    padding: 16px;
+  }
+
+  .activity-progress-title {
+    font-size: 22px;
+  }
+
+  .activity-progress-step {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

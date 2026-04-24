@@ -76,7 +76,7 @@
   font-size: 40px;
   font-weight: 700;
   color: white;
-  box-shadow: 0 0 40px rgba(99,102,241,0.3);
+  box-shadow: 0 0 40px hsla(var(--color-primary), 0.3);
 }
 
 .verified-badge {
@@ -136,7 +136,7 @@
   color: white;
   border-color: transparent;
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 15px hsla(var(--color-primary), 0.4);
 }
 
 .profile-role-badge {
@@ -222,7 +222,7 @@
 .profile-website-link {
   display: inline-block;
   margin-top: 14px;
-  color: #6366f1;
+  color: var(--primary);
   font-size: 14px;
   text-decoration: none;
 }
@@ -334,7 +334,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: var(--primary-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -379,7 +379,7 @@
 .no-reviews {
   text-align: center;
   padding: 40px;
-  color: #475569;
+  color: var(--muted-foreground);
 }
 
 .no-review-icon {
@@ -395,14 +395,14 @@
   align-items: center;
   justify-content: center;
   gap: 20px;
-  color: #64748b;
+  color: var(--muted-foreground);
 }
 
 .profile-pulse {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: var(--primary-gradient);
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -415,9 +415,9 @@
 
 .back-btn {
   padding: 10px 24px;
-  background: rgba(99,102,241,0.15);
-  border: 1px solid rgba(99,102,241,0.3);
-  color: #818cf8;
+  background: hsla(var(--color-primary), 0.15);
+  border: 1px solid hsla(var(--color-primary), 0.3);
+  color: var(--primary-strong);
   border-radius: 10px;
   cursor: pointer;
   font-size: 14px;

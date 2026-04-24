@@ -1,0 +1,386 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+.demo-dashboard-page {
+  min-height: 100vh;
+  color: var(--foreground);
+  background:
+    radial-gradient(circle at 12% 6%, rgba(14, 165, 233, 0.14), transparent 34%),
+    radial-gradient(circle at 88% 10%, rgba(249, 115, 22, 0.14), transparent 36%),
+    linear-gradient(180deg, var(--background) 0%, color-mix(in oklab, var(--background) 88%, var(--muted) 12%) 100%);
+  font-family: "Manrope", "Outfit", sans-serif;
+}
+
+.demo-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 72px;
+  padding: 0 5%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.demo-brand {
+  border: 0;
+  background: none;
+  color: var(--foreground);
+  font-family: "Space Grotesk", "Manrope", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.demo-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.demo-link-btn,
+.demo-primary-btn {
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card) 90%, var(--muted) 10%);
+  color: var(--foreground);
+  font-weight: 700;
+  padding: 0 13px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.demo-link-btn:hover,
+.demo-primary-btn:hover {
+  border-color: color-mix(in oklab, var(--primary) 36%, var(--border) 64%);
+}
+
+.demo-primary-btn {
+  border-color: transparent;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 55%, #c2410c 100%);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(234, 88, 12, 0.25);
+}
+
+.demo-content {
+  padding: 28px 5% 48px;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.demo-hero {
+  margin-bottom: 1rem;
+}
+
+.demo-preview-badge {
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid color-mix(in oklab, #0ea5e9 38%, var(--border) 62%);
+  background: color-mix(in oklab, #0ea5e9 12%, var(--card) 88%);
+  color: color-mix(in oklab, #0ea5e9 74%, var(--foreground) 26%);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.demo-hero h1 {
+  margin-top: 0.8rem;
+  font-size: clamp(1.65rem, 4vw, 2.8rem);
+  font-family: "Space Grotesk", "Manrope", sans-serif;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+
+.demo-hero p {
+  color: var(--muted-foreground);
+  margin-top: 0.5rem;
+  max-width: 760px;
+  line-height: 1.6;
+}
+
+.demo-role-switch {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.demo-role-chip {
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card) 86%, var(--muted) 14%);
+  color: var(--foreground);
+  border-radius: var(--radius-full);
+  padding: 8px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.demo-role-chip.active {
+  border-color: color-mix(in oklab, #f97316 48%, var(--border) 52%);
+  background: color-mix(in oklab, #f97316 16%, var(--card) 84%);
+}
+
+.demo-kpi-grid {
+  margin-top: 1.2rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.demo-kpi-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 0.9rem;
+  background: color-mix(in oklab, var(--card) 90%, var(--muted) 10%);
+}
+
+.demo-kpi-card p {
+  color: var(--muted-foreground);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.demo-kpi-card h3 {
+  margin-top: 0.35rem;
+  font-size: 1.45rem;
+  font-family: "Space Grotesk", "Manrope", sans-serif;
+}
+
+.demo-kpi-card span {
+  display: inline-block;
+  margin-top: 0.3rem;
+  font-size: 0.82rem;
+  color: color-mix(in oklab, #0ea5e9 72%, var(--foreground) 28%);
+  font-weight: 700;
+}
+
+.demo-main-grid {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.demo-panel {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--card) 90%, var(--muted) 10%);
+  padding: 1rem;
+}
+
+.demo-panel-wide {
+  grid-column: 1 / -1;
+}
+
+.demo-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.demo-panel-head h2 {
+  font-size: 1rem;
+  font-family: "Space Grotesk", "Manrope", sans-serif;
+}
+
+.demo-panel-head span {
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+  font-weight: 700;
+}
+
+.demo-pipeline-list {
+  margin-top: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.demo-stage-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.demo-stage-meta strong {
+  font-size: 0.9rem;
+}
+
+.demo-stage-meta span {
+  color: var(--muted-foreground);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.demo-stage-bar {
+  width: 100%;
+  height: 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--muted) 62%, var(--card) 38%);
+  overflow: hidden;
+}
+
+.demo-stage-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0ea5e9 0%, #f97316 100%);
+}
+
+.demo-opportunity-list {
+  margin-top: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.demo-opportunity-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  background: color-mix(in oklab, var(--card) 84%, var(--muted) 16%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.demo-opportunity-item strong {
+  font-size: 0.88rem;
+}
+
+.demo-opportunity-item p {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  margin-top: 0.1rem;
+}
+
+.demo-opportunity-meta {
+  text-align: right;
+}
+
+.demo-opportunity-meta span {
+  display: block;
+  font-size: 0.78rem;
+  color: color-mix(in oklab, #0ea5e9 72%, var(--foreground) 28%);
+  font-weight: 700;
+}
+
+.demo-opportunity-meta strong {
+  font-size: 0.85rem;
+}
+
+.demo-list,
+.demo-activity-list {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+}
+
+.demo-list li,
+.demo-activity-list li {
+  position: relative;
+  padding-left: 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.demo-list li + li,
+.demo-activity-list li + li {
+  margin-top: 0.45rem;
+}
+
+.demo-list li::before,
+.demo-activity-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.45rem;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: color-mix(in oklab, #0ea5e9 72%, var(--foreground) 28%);
+}
+
+.demo-activity-list li {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding-left: 0;
+}
+
+.demo-activity-list li::before {
+  display: none;
+}
+
+.demo-activity-list span {
+  font-weight: 700;
+  color: var(--foreground);
+  font-size: 0.84rem;
+}
+
+.demo-activity-list p {
+  margin: 0;
+}
+
+.demo-list.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 1rem;
+}
+
+.demo-list.columns li + li {
+  margin-top: 0;
+}
+
+@media (max-width: 1060px) {
+  .demo-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .demo-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .demo-topbar {
+    height: auto;
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .demo-topbar-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .demo-link-btn,
+  .demo-primary-btn {
+    flex: 1 1 120px;
+  }
+
+  .demo-content {
+    padding-top: 18px;
+  }
+
+  .demo-kpi-grid,
+  .demo-list.columns {
+    grid-template-columns: 1fr;
+  }
+
+  .demo-activity-list li {
+    grid-template-columns: 62px 1fr;
+  }
+}

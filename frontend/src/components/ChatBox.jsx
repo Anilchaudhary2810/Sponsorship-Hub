@@ -177,7 +177,7 @@ const ChatBox = ({ role, title = "Live Chat", onClose, chatKey }) => {
             <div key={msg.id || index} className={`chat-row ${mine ? "chat-row-own" : "chat-row-other"}`}>
               {/* Sender name label for other user's first consecutive message */}
               {!mine && showName && (
-                <div className="chat-sender-name" style={{ color: msg.sender_role === 'organizer' ? '#10b981' : msg.sender_role === 'influencer' ? '#f59e0b' : '#818cf8' }}>
+                <div className="chat-sender-name" style={{ color: msg.sender_role === 'organizer' ? '#10b981' : msg.sender_role === 'influencer' ? '#0ea5e9' : '#f97316' }}>
                   {msg.sender_name || msg.sender_role}
                 </div>
               )}

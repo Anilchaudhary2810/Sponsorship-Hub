@@ -1,6 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import PrivateRoute from "./components/PrivateRoute";
+import AIChatbot from "./components/AIChatbot";
 
 const Register = lazy(() => import("./pages/Register"));
 const Login = lazy(() => import("./pages/Login"));
@@ -13,6 +14,7 @@ const InfluencerDashboard = lazy(() => import("./pages/InfluencerDashboard"));
 const PublicProfile = lazy(() => import("./pages/PublicProfile"));
 const MyProfilePage = lazy(() => import("./pages/MyProfilePage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const ActivityCenterPage = lazy(() => import("./pages/ActivityCenterPage"));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const ScaleOpsPage = lazy(() => import("./pages/ScaleOpsPage"));
 
@@ -72,63 +74,74 @@ function App() {
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/verify-email" element={<VerifyEmail />} />
-        <Route path="/profile/:userId" element={<PublicProfile />} />
-        <Route
-          path="/my-profile"
-          element={(
-            <PrivateRoute>
-              <MyProfilePage />
-            </PrivateRoute>
-          )}
-        />
-        <Route
-          path="/analytics/:userId?"
-          element={(
-            <PrivateRoute>
-              <AnalyticsPage />
-            </PrivateRoute>
-          )}
-        />
-        <Route
-          path="/scale-ops"
-          element={(
-            <PrivateRoute>
-              <ScaleOpsPage />
-            </PrivateRoute>
-          )}
-        />
-        <Route
-          path="/sponsor-dashboard"
-          element={(
-            <PrivateRoute role="sponsor">
-              <SponsorDashboard />
-            </PrivateRoute>
-          )}
-        />
-        <Route
-          path="/organizer-dashboard"
-          element={(
-            <PrivateRoute role="organizer">
-              <OrganizerDashboard />
-            </PrivateRoute>
-          )}
-        />
-        <Route
-          path="/influencer-dashboard"
-          element={(
-            <PrivateRoute role="influencer">
-              <InfluencerDashboard />
-            </PrivateRoute>
-          )}
-        />
-      </Routes>
+      <>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/profile/:userId" element={<PublicProfile />} />
+          <Route
+            path="/my-profile"
+            element={(
+              <PrivateRoute>
+                <MyProfilePage />
+              </PrivateRoute>
+            )}
+          />
+          <Route
+            path="/analytics/:userId?"
+            element={(
+              <PrivateRoute>
+                <AnalyticsPage />
+              </PrivateRoute>
+            )}
+          />
+          <Route
+            path="/activity-center"
+            element={(
+              <PrivateRoute>
+                <ActivityCenterPage />
+              </PrivateRoute>
+            )}
+          />
+          <Route
+            path="/scale-ops"
+            element={(
+              <PrivateRoute>
+                <ScaleOpsPage />
+              </PrivateRoute>
+            )}
+          />
+          <Route
+            path="/sponsor-dashboard"
+            element={(
+              <PrivateRoute role="sponsor">
+                <SponsorDashboard />
+              </PrivateRoute>
+            )}
+          />
+          <Route
+            path="/organizer-dashboard"
+            element={(
+              <PrivateRoute role="organizer">
+                <OrganizerDashboard />
+              </PrivateRoute>
+            )}
+          />
+          <Route
+            path="/influencer-dashboard"
+            element={(
+              <PrivateRoute role="influencer">
+                <InfluencerDashboard />
+              </PrivateRoute>
+            )}
+          />
+        </Routes>
+        <AIChatbot />
+      </>
     </Suspense>
   );
 }

@@ -1,7 +1,8 @@
 .sponsor-container {
   padding: 40px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   min-height: calc(100vh - 72px);
   background: var(--background);
 }
@@ -79,7 +80,7 @@
   border: none;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px hsla(var(--color-primary), 0.3);
   width: 180px;
   display: flex;
   justify-content: center;
@@ -88,7 +89,7 @@
 
 .create-primary-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 24px hsla(var(--color-primary), 0.4);
 }
 
 .horizontal-select:focus {
@@ -282,14 +283,23 @@
 
 .deal-actions-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid var(--border);
 }
 
+.pipeline-main-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
 .mini-action-btn {
-  flex: 1;
+  flex: 1 1 120px;
+  min-width: 110px;
   padding: 10px 12px;
   border-radius: var(--radius-md);
   font-size: 13px;
@@ -392,12 +402,12 @@
   font-weight: 700;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px hsla(var(--color-primary), 0.3);
 }
 
 .accept-pill-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 24px hsla(var(--color-primary), 0.4);
 }
 
 .reject-pill-btn {
@@ -443,6 +453,8 @@
   .dashboard-section-wide { padding: 20px; }
   .deal-actions-row, .marketplace-actions-row { flex-direction: column; }
   .accept-pill-btn, .reject-pill-btn, .mini-action-btn { width: 100%; }
+  .pipeline-main-actions { grid-template-columns: 1fr; }
+  .doc-buttons-group { grid-template-columns: 1fr; }
   
   /* Consolidated Horizontal Scroll for all sections except Analytics */
   .event-horizontal-grid, 
@@ -481,8 +493,8 @@
 }
 
 .delete-confirm-btn.proposal-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+  background: var(--primary-gradient);
+  box-shadow: 0 4px 15px hsla(var(--color-primary), 0.4);
 }
 
 .proposal-modal-overlay {
@@ -560,9 +572,9 @@
 }
 
 .proposal-confirm-btn {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: var(--primary-gradient);
   color: #fff;
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 10px 20px hsla(var(--color-primary), 0.28);
 }
 
 .proposal-confirm-btn:disabled {
@@ -579,7 +591,7 @@
   font-size: 3rem;
   margin-bottom: 1rem;
   text-align: center;
-  filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
+  filter: drop-shadow(0 0 10px hsla(var(--color-primary), 0.5));
 }
 
 .glass-morphism {
@@ -687,7 +699,7 @@
   margin: 0 auto 20px;
   border-radius: 50%;
   padding: 4px;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: var(--primary-gradient);
 }
 
 .avatar-placeholder {
@@ -764,7 +776,7 @@
 :root[data-theme='light'] .campaign-item.active {
   background: #eef4ff;
   border-color: #7ea6f8;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+  box-shadow: 0 0 0 2px hsla(var(--color-primary), 0.16);
 }
 
 .campaign-name {
@@ -886,12 +898,12 @@
   font-size: 14px;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px hsla(var(--color-primary), 0.3);
 }
 
 .publish-btn-wide:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 20px hsla(var(--color-primary), 0.4);
 }
 
 .publish-btn-wide:disabled {
@@ -1002,7 +1014,7 @@
   color: white;
   border-color: transparent;
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 15px hsla(var(--color-primary), 0.3);
 }
 
 .marketplace-header-row {
@@ -1091,7 +1103,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 14px center;
   background-size: 16px;
@@ -1162,7 +1174,8 @@
 }
 
 .doc-buttons-group {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-top: 15px;
   width: 100%;
@@ -1176,10 +1189,58 @@
 }
 
 .mini-action-btn.primary-outline {
-  background: rgba(99, 102, 241, 0.05);
-  border: 1px solid rgba(99, 102, 241, 0.3) !important;
-  color: #818cf8 !important;
+  background: hsla(var(--color-primary), 0.1);
+  border: 1.5px solid hsla(var(--color-primary), 0.55) !important;
+  color: var(--primary-strong) !important;
   flex: 1;
+}
+
+.mini-action-btn.primary-outline:hover:not(:disabled) {
+  background: hsla(var(--color-primary), 0.18);
+  border-color: hsla(var(--color-primary), 0.7) !important;
+}
+
+.mini-action-btn.primary-outline:disabled,
+.mini-action-btn.legal-outline:disabled {
+  opacity: 0.72;
+  border-style: solid !important;
+}
+
+/* Keep Sponsor pipeline stable even if other dashboard styles are loaded later */
+.sponsor-container .deal-pipeline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .sponsor-container .deal-pipeline-grid {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .sponsor-container .deal-pipeline-grid {
+    display: flex;
+    overflow-x: auto;
+    padding: 10px 4px 25px;
+    gap: 16px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin-left: -5px;
+    margin-right: -5px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sponsor-container .deal-pipeline-grid > * {
+    min-width: 280px;
+    scroll-snap-align: center;
+    flex: 0 0 auto;
+  }
+
+  .sponsor-container .deal-pipeline-grid > .empty-state {
+    min-width: 100%;
+  }
 }
 
 :root[data-theme='light'] .deal-flow-card {
@@ -1195,4 +1256,3 @@
 :root[data-theme='light'] .dashboard-section-wide {
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
 }
-

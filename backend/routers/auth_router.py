@@ -19,7 +19,7 @@ from ..auth import (
 from ..config import settings
 from ..logger import auth_logger, security_logger
 from ..core.audit import log_audit_event
-from ..core.email import send_password_reset_email
+from ..core.email import send_password_reset_email, send_verification_email
 from backend.core.limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -66,12 +66,31 @@ def _should_send_password_reset_email() -> bool:
     return True
 
 
+def _should_send_verification_email() -> bool:
+    return _should_send_password_reset_email()
+
+
+def _verification_expiry_hours() -> int:
+    try:
+        return max(1, int(getattr(settings, "EMAIL_VERIFICATION_EXPIRE_HOURS", 24)))
+    except (TypeError, ValueError):
+        return 24
+
+
 def _build_password_reset_link(raw_token: str) -> str:
     base = (settings.FRONTEND_BASE_URL or "").strip().rstrip("/")
     if not base:
         base = "http://localhost:5173"
     token_q = quote(raw_token, safe="")
     return f"{base}/reset-password?token={token_q}"
+
+
+def _build_verification_link(raw_token: str) -> str:
+    base = (settings.FRONTEND_BASE_URL or "").strip().rstrip("/")
+    if not base:
+        base = "http://localhost:5173"
+    token_q = quote(raw_token, safe="")
+    return f"{base}/verify-email?token={token_q}"
 
 
 def _set_auth_cookies(response: Response, access_token: str, refresh_token: str, csrf_token: str) -> None:
@@ -112,6 +131,22 @@ def _clear_auth_cookies(response: Response) -> None:
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/")
     response.delete_cookie("csrf_token", path="/")
+
+
+def _issue_verification_token(db: Session, user_id: int) -> tuple[str, datetime]:
+    verification_token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(hours=_verification_expiry_hours())
+    crud.update_user(
+        db,
+        user_id,
+        {
+            "is_verified": False,
+            "verification_token": verification_token,
+            "verification_token_expires_at": expires_at,
+            "refresh_token": None,
+        },
+    )
+    return verification_token, expires_at
 
 
 @router.post("/login", response_model=schemas.AuthSessionResponse)
@@ -273,17 +308,7 @@ def register(request: Request, response: Response, user: schemas.UserCreate, db:
 
     db_user = crud.create_user(db, user)
     user_id = _as_int(getattr(db_user, "id", 0))
-    verification_token = secrets.token_urlsafe(32)
-
-    crud.update_user(
-        db,
-        user_id,
-        {
-            "is_verified": False,
-            "verification_token": verification_token,
-            "refresh_token": None,
-        },
-    )
+    verification_token, _ = _issue_verification_token(db, user_id)
     db.refresh(db_user)
 
     auth_logger.info(f"New user registered: {user.email} (verification required)")
@@ -299,12 +324,26 @@ def register(request: Request, response: Response, user: schemas.UserCreate, db:
 
     env_value = (settings.ENV or "").lower()
     is_production = env_value in {"production", "prod"}
+    verification_email_sent = False
+
+    if _should_send_verification_email():
+        try:
+            verification_link = _build_verification_link(verification_token)
+            send_verification_email(
+                to_email=_as_str(getattr(db_user, "email", ""), default=user.email),
+                verify_link=verification_link,
+                expires_hours=_verification_expiry_hours(),
+            )
+            verification_email_sent = True
+        except Exception as exc:
+            auth_logger.warning(f"Verification email delivery failed for user {user_id}: {exc}")
 
     return {
         "message": "Registration successful. Please verify your email before logging in.",
         "user": db_user,
         "requires_verification": True,
         "verification_token_preview": None if is_production else verification_token,
+        "verification_email_sent": verification_email_sent,
     }
 
 
@@ -315,8 +354,66 @@ def verify_email(token: str, db: Session = Depends(get_db)):
         raise exceptions.AuthenticationError("Invalid or expired verification token")
 
     user_id = _as_int(getattr(user, "id", 0))
-    crud.update_user(db, user_id, {"is_verified": True, "verification_token": None})
+    expires_at = getattr(user, "verification_token_expires_at", None)
+    if isinstance(expires_at, datetime) and expires_at <= datetime.utcnow():
+        crud.update_user(db, user_id, {"verification_token": None, "verification_token_expires_at": None})
+        raise exceptions.AuthenticationError("Invalid or expired verification token")
+
+    crud.update_user(
+        db,
+        user_id,
+        {"is_verified": True, "verification_token": None, "verification_token_expires_at": None},
+    )
     return {"message": "Email verified successfully"}
+
+
+@router.post("/resend-verification", response_model=schemas.VerificationResendResponse)
+@limiter.limit("5/minute")
+def resend_verification_email(
+    request: Request,
+    data: schemas.VerificationResendRequest,
+    db: Session = Depends(get_db),
+):
+    generic_message = "If that account exists and is pending verification, a new email has been sent."
+    env_value = (settings.ENV or "").lower()
+    is_production = env_value in {"production", "prod"}
+
+    user = crud.get_user_by_email(db, data.email)
+    if not user:
+        return {"message": generic_message, "verification_token_preview": None}
+
+    user_id = _as_int(getattr(user, "id", 0))
+    if _as_bool(getattr(user, "is_verified", False)):
+        return {"message": generic_message, "verification_token_preview": None}
+
+    verification_token, _ = _issue_verification_token(db, user_id)
+    db.refresh(user)
+
+    if _should_send_verification_email():
+        try:
+            verification_link = _build_verification_link(verification_token)
+            send_verification_email(
+                to_email=_as_str(getattr(user, "email", ""), default=data.email),
+                verify_link=verification_link,
+                expires_hours=_verification_expiry_hours(),
+            )
+        except Exception as exc:
+            auth_logger.warning(f"Verification email resend failed for user {user_id}: {exc}")
+
+    log_audit_event(
+        db,
+        action="auth.verification_resent",
+        actor_user_id=user_id,
+        target_type="user",
+        target_id=user_id,
+        ip_address=_client_ip(request),
+        user_agent=_user_agent(request),
+    )
+
+    return {
+        "message": generic_message,
+        "verification_token_preview": None if is_production else verification_token,
+    }
 
 
 @router.post("/logout")

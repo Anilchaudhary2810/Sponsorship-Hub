@@ -3,28 +3,28 @@
 :root {
   color-scheme: dark;
   /* --- Shared Accents --- */
-  --color-primary: 243 75% 59%;    /* #6366f1 */
-  --color-primary-dark: 239 84% 67%;
-  --color-secondary: 188 86% 43%;   /* #06b6d4 */
-  --color-accent: 38 92% 50%;       /* #f59e0b */
-  --brand-gradient: linear-gradient(135deg, hsl(var(--color-primary)) 0%, #a855f7 100%);
+  --color-primary: 24 95% 53%;      /* #f97316 */
+  --color-primary-dark: 20 91% 48%; /* #ea580c */
+  --color-secondary: 199 89% 48%;   /* #0ea5e9 */
+  --color-accent: 43 96% 56%;       /* #f59e0b */
+  --brand-gradient: linear-gradient(135deg, #fb923c 0%, #ea580c 55%, #c2410c 100%);
   
   /* --- Dark Theme Palette (Default) --- */
-  --bg-app: 240 10% 3.9%;          /* #09090b */
-  --bg-surface: 240 5.9% 10%;      /* #18181b */
-  --bg-card: 240 5.9% 10%;
-  --bg-muted: 240 4.8% 15.1%;
-  --bg-input: 240 5.9% 7%;
-  --bg-glass: rgba(9, 9, 11, 0.75);
+  --bg-app: 222 47% 6%;             /* #0b1220 */
+  --bg-surface: 222 39% 11%;        /* #111c31 */
+  --bg-card: 222 35% 12%;
+  --bg-muted: 221 26% 18%;
+  --bg-input: 222 30% 14%;
+  --bg-glass: rgba(9, 16, 30, 0.72);
   
-  --text-main: 0 0% 98%;           /* #fafafa */
-  --text-muted: 240 5% 64.9%;      /* #a1a1aa */
-  --text-inverse: 240 10% 3.9%;
+  --text-main: 210 40% 98%;         /* #f8fafc */
+  --text-muted: 214 20% 74%;        /* #b8c2d4 */
+  --text-inverse: 222 47% 8%;
   
-  --border-main: 240 3.7% 15.9%;   /* #27272a */
-  --border-muted: 240 3.7% 12%;
+  --border-main: 217 24% 24%;
+  --border-muted: 217 24% 19%;
   
-  --shadow-color: 0 0% 0%;
+  --shadow-color: 2, 6, 23;
   --shadow-strength: 40%;
   
   --radius-sm: 8px;
@@ -34,29 +34,29 @@
   --radius-full: 9999px;
 
   --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  --shadow-glow: 0 0 20px hsla(var(--color-primary), 0.25);
-  --primary-strong: hsl(237 74% 52%);
+  --shadow-glow: 0 0 20px hsla(var(--color-primary), 0.26);
+  --primary-strong: hsl(var(--color-primary-dark));
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg-app: 210 40% 98.5%;        /* #f8fafc */
+  --bg-app: 30 40% 98%;            /* warm neutral */
   --bg-surface: 0 0% 100%;         /* #ffffff */
   --bg-card: 0 0% 100%;
-  --bg-muted: 210 40% 96.1%;
-  --bg-input: 210 40% 95%;        /* Darkened slightly for better input contrast */
-  --bg-glass: rgba(255, 255, 255, 0.7);
+  --bg-muted: 30 46% 95%;
+  --bg-input: 30 36% 93%;
+  --bg-glass: rgba(255, 255, 255, 0.78);
   
-  --text-main: 222 47% 11.2%;      /* #0f172a */
-  --text-muted: 215 25% 40%;       /* Darkened for better readability */
+  --text-main: 222 47% 11%;
+  --text-muted: 215 20% 36%;
   --text-inverse: 0 0% 98%;
   
-  --border-main: 214 32% 91%;      /* #e2e8f0 */
-  --border-muted: 214 32% 85%;
+  --border-main: 214 25% 86%;
+  --border-muted: 214 24% 80%;
   
-  --shadow-color: 222 47% 11.2%;
+  --shadow-color: 15, 23, 42;
   --shadow-strength: 10%;
-  --primary-strong: hsl(221 83% 47%);
+  --primary-strong: hsl(var(--color-primary-dark));
 }
 
 /* Fix global neon glow issues */
@@ -86,6 +86,15 @@
   --primary: hsl(var(--color-primary));
   --primary-foreground: hsl(var(--text-inverse));
   --primary-gradient: var(--brand-gradient);
+  --secondary: hsl(var(--color-secondary));
+  --accent: hsl(var(--color-accent));
+  --surface: color-mix(in oklab, var(--card) 88%, var(--muted) 12%);
+  --success: hsl(160 84% 39%);
+  --destructive: hsl(0 84% 60%);
+  --shadow-sm: 0 4px 12px rgba(var(--shadow-color), 0.14);
+  --shadow-md: 0 10px 24px rgba(var(--shadow-color), 0.18);
+  --shadow-xl: 0 20px 40px rgba(var(--shadow-color), 0.24);
+  --shadow-2xl: 0 28px 68px rgba(var(--shadow-color), 0.34);
 }
 
 @keyframes slideUp {
@@ -142,6 +151,14 @@ button, input, select, textarea, div, section, header, nav, aside {
 input, select, textarea {
   font-family: inherit;
   transition: var(--transition);
+  color: var(--foreground);
+  caret-color: var(--primary);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in oklab, var(--muted-foreground) 88%, var(--foreground) 12%);
+  opacity: 1;
 }
 
 select option {
@@ -208,6 +225,69 @@ a {
 .profile-link:hover {
   border-bottom-style: solid;
   filter: brightness(1.2);
+}
+
+/* ===== ACTIVE PIPELINE SHARED STRUCTURE ===== */
+.pipeline-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pipeline-activity-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--foreground);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+  width: fit-content;
+  border-bottom: 1px dashed color-mix(in oklab, var(--primary) 40%, var(--border) 60%);
+  transition: all 0.2s ease;
+}
+
+.pipeline-activity-link:hover {
+  color: var(--primary-strong);
+  border-bottom-style: solid;
+}
+
+.pipeline-activity-link:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--primary) 55%, white 45%);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.section-nav-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-bottom: 1px dashed color-mix(in oklab, var(--primary) 38%, var(--border) 62%);
+  transition: color 0.2s ease, border-bottom-style 0.2s ease;
+}
+
+.section-nav-link:hover {
+  color: var(--primary-strong);
+  border-bottom-style: solid;
+}
+
+.mini-action-btn.invoice-btn {
+  border-width: 1.5px !important;
+  border-style: solid !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 24%, transparent 76%);
+}
+
+.mini-action-btn.invoice-btn:disabled {
+  opacity: 0.75;
 }
 
 /* Shared proposal/apply modal styles for consistent flows across dashboards */
@@ -286,9 +366,9 @@ a {
 }
 
 .proposal-confirm-btn {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: var(--primary-gradient);
   color: #fff;
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 10px 20px hsla(var(--color-primary), 0.34);
 }
 
 .proposal-confirm-btn:disabled {

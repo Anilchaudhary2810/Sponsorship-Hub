@@ -102,7 +102,7 @@
   font-size: 14px;
   font-weight: 800;
   color: #ffffff;
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 20px hsla(var(--color-primary), 0.4);
 }
 
 .navbar-left h2 {
@@ -143,6 +143,22 @@
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.admin-nav-btn {
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--primary) 12%, var(--card));
+  color: var(--foreground);
+  border-radius: var(--radius-full);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-nav-btn:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 18%, var(--card));
 }
 
 .profile-wrap, .logout-wrap {
@@ -300,7 +316,7 @@
   font-weight: 700;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px hsla(var(--color-primary), 0.3);
 }
 
 .profile-ghost-btn {
@@ -323,7 +339,7 @@
 
 .profile-inline-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 6px 16px hsla(var(--color-primary), 0.4);
 }
 
 .profile-review-list {
@@ -384,7 +400,7 @@
 }
 
 .profile-popover select {
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 14px center;
   background-size: 16px;
@@ -549,7 +565,7 @@
 
 .trust-review-count {
   font-size: 11px;
-  color: #64748b;
+  color: var(--muted-foreground);
 }
 
 .review-item-top {

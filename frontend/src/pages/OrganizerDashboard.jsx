@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import ChatBox from "../components/ChatBox";
@@ -8,6 +8,8 @@ import EmptyState from "../components/EmptyState";
 import DealCard from "../components/DealCard";
 import QuickActionsBar from "../components/QuickActionsBar";
 import MediaPortfolio from "../components/MediaPortfolio";
+import EventDetailModal from "../components/EventDetailModal";
+import ActivityProgressModal from "../components/ActivityProgressModal";
 import { formatCurrency } from "../utils/formatCurrency";
 import { mapEventData, mapDealData } from "../utils/mapping";
 import AgreementModal from "../components/AgreementModal";
@@ -22,6 +24,7 @@ import {
   fetchEvents,
   getAvailableSponsors,
   fetchDeals,
+  fetchDeal,
   deleteEvent,
   signDeal as signDealFn,
   updateEvent,
@@ -31,6 +34,8 @@ import DocumentViewer from "../components/DocumentViewer";
 
 const OrganizerDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const dealIdFromQuery = Number(searchParams.get("dealId") || 0);
   const indianStates = INDIAN_STATES;
   const categories = ["Tech", "Music", "Sports", "Business", "Education", "Art", "Social", "Other"];
   
@@ -50,6 +55,9 @@ const OrganizerDashboard = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewedDeals, setReviewedDeals] = useState({}); // { dealId: rating }
   const [selectedEventForMedia, setSelectedEventForMedia] = useState(null);
+  const [selectedEventDetails, setSelectedEventDetails] = useState(null);
+  const [selectedEventDeal, setSelectedEventDeal] = useState(null);
+  const [selectedPipelineDeal, setSelectedPipelineDeal] = useState(null);
 
   const [formData, setFormData] = useState({
     title: "", state: "Gujarat", city: "", budget: "", currency: "INR",
@@ -78,7 +86,7 @@ const OrganizerDashboard = () => {
           focus: u.focus || "N/A",
           state: u.state || "N/A",
           city: u.city || "N/A",
-          preferredBudget: u.preferred_budget ? `â‚¹${Number(u.preferred_budget).toLocaleString("en-IN")}` : "N/A",
+          preferredBudget: u.preferred_budget ? formatCurrency(Number(u.preferred_budget)) : "N/A",
           about: u.about || "N/A",
         })));
 
@@ -235,6 +243,36 @@ const OrganizerDashboard = () => {
   const getDealValue = (deal) =>
     Number(deal.paymentAmount) || Number(deal.event?.raw_budget) || Number(deal.event?.budget) || 0;
 
+  const normalizeEventForModal = (eventLike, fallbackOrganizerId) => {
+    if (!eventLike) return null;
+    const hasMappedShape = Object.prototype.hasOwnProperty.call(eventLike, "budget");
+    if (hasMappedShape) {
+      return {
+        ...eventLike,
+        budget: Number(eventLike.budget ?? eventLike.raw_budget ?? 0),
+        organizer_id: Number(eventLike.organizer_id ?? fallbackOrganizerId ?? 0),
+        media_items: Array.isArray(eventLike.media_items) ? eventLike.media_items : [],
+      };
+    }
+    const mapped = mapEventData(eventLike);
+    return {
+      ...mapped,
+      organizer_id: Number(mapped.organizer_id || fallbackOrganizerId || 0),
+    };
+  };
+
+  const openDealEventDetails = (deal) => {
+    const fromDealPayload = normalizeEventForModal(deal?.event, deal?.organizer_id);
+    const fromEventList = events.find((evt) => Number(evt.id) === Number(deal?.event_id));
+    const eventForModal = fromDealPayload || fromEventList || null;
+    if (!eventForModal) {
+      toast.error("Event details are unavailable for this deal.");
+      return;
+    }
+    setSelectedEventDetails(eventForModal);
+    setSelectedEventDeal(deal);
+  };
+
   const handleAddMedia = async (eventId, mediaItem) => {
     const event = events.find(e => e.id === eventId);
     if (!event) return;
@@ -263,12 +301,66 @@ const OrganizerDashboard = () => {
     { title: "Revenue", value: formatCurrency(deals.filter(d => d.paymentDone).reduce((s, d) => s + (Number(d.paymentAmount) || 0), 0)) },
   ];
 
+  const getLatestItems = (items, count = 4) =>
+    [...items]
+      .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
+      .slice(0, count);
+
+  const visiblePipelineDeals = deals.filter((deal) => deal.status !== "rejected");
+
+  const filteredSponsors = availableSponsors.filter((sponsor) => {
+    const matchesState = selectedState === "All States" || sponsor.state === selectedState;
+    const matchesSearch =
+      sponsor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sponsor.focus.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sponsor.city.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesState && matchesSearch;
+  });
+
+  const latestPipelineDeals = getLatestItems(visiblePipelineDeals);
+  const latestSponsors = getLatestItems(filteredSponsors);
+
   const quickActions = [
     { key: "create", label: "Create Event", tone: "primary", onClick: () => setIsCreateEventOpen(true) },
     { key: "ops", label: "Scale Ops", tone: "emphasis", onClick: () => navigate("/scale-ops") },
     { key: "analytics", label: "Analytics", onClick: () => navigate("/analytics") },
     { key: "profile", label: "Profile", onClick: () => navigate("/my-profile") },
   ];
+
+  const openDealProgress = (deal) => {
+    const dealId = Number(deal?.id || 0);
+    if (!dealId) return;
+    fetchDeal(dealId)
+      .then((resp) => {
+        const fresh = mapDealData(resp.data, currentUser);
+        setSelectedPipelineDeal(fresh);
+      })
+      .catch(() => {
+        setSelectedPipelineDeal(deal);
+      });
+  };
+
+  useEffect(() => {
+    if (!dealIdFromQuery || !deals.length || selectedPipelineDeal) return;
+    const matched = deals.find((deal) => Number(deal.id) === dealIdFromQuery);
+    if (matched) {
+      openDealProgress(matched);
+    }
+  }, [dealIdFromQuery, deals, selectedPipelineDeal]);
+
+  const closePipelineDealModal = () => {
+    setSelectedPipelineDeal(null);
+    if (searchParams.has("dealId")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("dealId");
+      next.delete("focus");
+      setSearchParams(next, { replace: true });
+    }
+  };
+
+  const goToActivityCenter = (section) => {
+    navigate(`/activity-center?section=${section}`);
+  };
 
   return (
     <div>
@@ -279,14 +371,14 @@ const OrganizerDashboard = () => {
             <div className="title-action-row">
               <h1 className="organizer-title">Organizer Dashboard</h1>
               <button className="analytics-nav-btn" onClick={() => navigate('/analytics')}>
-                ðŸ“Š Analytics
+                Analytics
               </button>
             </div>
             <p className="subtitle">Manage events, sponsors, and signed deals in one place.</p>
           </div>
           <div className="header-actions">
             <button className="create-primary-btn" onClick={() => setIsCreateEventOpen(!isCreateEventOpen)}>
-              {isCreateEventOpen ? "âœ• Close Form" : "ï¼‹ Create New Event"}
+              {isCreateEventOpen ? "Close Form" : "+ Create New Event"}
             </button>
             <div className="header-filters">
               <select value={selectedState} onChange={(e) => setSelectedState(e.target.value)} className="horizontal-select">
@@ -337,7 +429,7 @@ const OrganizerDashboard = () => {
                     <label>Budget Needed</label>
                     <div className="budget-input-group">
                       <select name="currency" value={formData.currency} onChange={handleChange}>
-                        <option value="INR">â‚¹</option>
+                        <option value="INR">INR</option>
                         <option value="USD">$</option>
                       </select>
                       <input type="number" name="budget" placeholder="0" required value={formData.budget} onChange={handleChange} />
@@ -367,26 +459,39 @@ const OrganizerDashboard = () => {
         <div className="horizontal-sections-stack">
           <section className="dashboard-section-wide">
             <div className="section-header">
-              <h2>Active Deal Pipeline</h2>
-              <span className="badge">{deals.length} Total</span>
+              <h2>
+                <button type="button" className="section-nav-link" onClick={() => goToActivityCenter("pipeline")}>
+                  Active Deal Pipeline
+                </button>
+              </h2>
+              <span className="badge">{visiblePipelineDeals.length} Total</span>
             </div>
             <div className="horizontal-scroll-container">
               <div className="deal-pipeline-grid">
-                {deals.filter(d => d.status !== 'rejected').map(deal => (
+                {latestPipelineDeals.map(deal => (
                   <DealCard key={deal.id} deal={deal}>
                     <div className="deal-card-content-wide">
-                      <div className="deal-type-chip">Event Deal</div>
-                      <h4 className="deal-sponsor-name">
-                        <span
-                          className="profile-link"
-                          onClick={() => navigate(`/profile/${deal.sponsor_id}`)}
-                          title="View Sponsor Profile"
+                      <div className="pipeline-card-head">
+                        <div className="deal-type-chip">Event Deal</div>
+                        <h4 className="deal-sponsor-name">
+                          <span
+                            className="profile-link"
+                            onClick={() => navigate(`/profile/${deal.sponsor_id}`)}
+                            title="View Sponsor Profile"
+                          >
+                            {getDealPartnerName(deal)}
+                          </span>
+                        </h4>
+                        <button
+                          type="button"
+                          className="pipeline-activity-link"
+                          onClick={() => openDealProgress(deal)}
+                          title="Open activity progress"
                         >
-                          {getDealPartnerName(deal)}
-                        </span>
-                      </h4>
-                      <p className="deal-subject-line">{getDealSubject(deal)}</p>
-                      <p className="deal-context-line">{getDealSubline(deal)}</p>
+                          {getDealSubject(deal)}
+                        </button>
+                        <p className="deal-context-line">{getDealSubline(deal)}</p>
+                      </div>
                       <div className="deal-meta-row">
                         <span className="deal-meta-item">Value: {formatCurrency(getDealValue(deal))}</span>
                         <span className="deal-meta-item">ID: #{deal.id}</span>
@@ -404,14 +509,35 @@ const OrganizerDashboard = () => {
                             <button className="mini-action-btn reject" onClick={() => handleDealAction(deal.id, acceptDeal, { role: "organizer", accept: false })}>Reject</button>
                           </>
                         )}
-                        <button
-                          className="mini-action-btn legal"
-                          disabled={!deal.paymentDone || deal.organizerSigned}
-                          onClick={() => deal.paymentDone && !deal.organizerSigned && handleStartSigning(deal)}
-                        >
-                          Sign
-                        </button>
-                        </div>
+                        {deal.status === "closed" ? (
+                          reviewedDeals[deal.id] ? (
+                            <div className="reviewed-badge">
+                              {Array.from({ length: 5 }, (_, i) => (
+                                <span key={i} className={i < reviewedDeals[deal.id] ? "rstar filled" : "rstar"}>*</span>
+                              ))}
+                              <span className="reviewed-label">Reviewed</span>
+                            </div>
+                          ) : (
+                            <button
+                              className="mini-action-btn review"
+                              onClick={() => {
+                                setReviewDeal(deal);
+                                setShowReviewModal(true);
+                              }}
+                            >
+                              Review
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            className="mini-action-btn legal"
+                            disabled={!deal.paymentDone || deal.organizerSigned}
+                            onClick={() => deal.paymentDone && !deal.organizerSigned && handleStartSigning(deal)}
+                          >
+                            Sign
+                          </button>
+                        )}
+                      </div>
                       <div className="pipeline-main-actions">
                         <button
                           className="mini-action-btn legal-outline"
@@ -421,38 +547,18 @@ const OrganizerDashboard = () => {
                           Agreement
                         </button>
                         <button
-                          className="mini-action-btn primary-outline"
+                          className="mini-action-btn primary-outline invoice-btn"
                           disabled={!deal.paymentDone}
                           onClick={() => deal.paymentDone && setShowDocument({ type: "invoice", deal })}
                         >
                           Invoice
                         </button>
-                        {reviewedDeals[deal.id] ? (
-                          <div className="reviewed-badge">
-                            {Array.from({ length: 5 }, (_, i) => (
-                              <span key={i} className={i < reviewedDeals[deal.id] ? "rstar filled" : "rstar"}>*</span>
-                            ))}
-                            <span className="reviewed-label">Reviewed</span>
-                          </div>
-                        ) : (
-                          <button
-                            className="mini-action-btn review"
-                            disabled={deal.status !== "closed"}
-                            onClick={() => {
-                              if (deal.status !== "closed") return;
-                              setReviewDeal(deal);
-                              setShowReviewModal(true);
-                            }}
-                          >
-                            Review
-                          </button>
-                        )}
                         <button className="mini-action-btn chat" onClick={() => setActiveDealChat(deal)}>Chat</button>
                       </div>
                     </div>
                   </DealCard>
                 ))}
-                {deals.filter(d => d.status !== 'rejected').length === 0 && (
+                {visiblePipelineDeals.length === 0 && (
                   <EmptyState
                     title="No active deals yet"
                     description="Start by sending your first sponsorship proposal."
@@ -469,7 +575,11 @@ const OrganizerDashboard = () => {
               <div className="section-header marketplace-header-row">
                 <div className="section-title-group">
                   <div className="title-with-action">
-                    <h2>Discovery Marketplace</h2>
+                    <h2>
+                      <button type="button" className="section-nav-link" onClick={() => goToActivityCenter("discovery")}>
+                        Discovery Marketplace
+                      </button>
+                    </h2>
                     <button 
                       className={`filter-toggle-btn ${showFilters ? 'active' : ''}`}
                       onClick={() => setShowFilters(!showFilters)}
@@ -496,14 +606,7 @@ const OrganizerDashboard = () => {
                 )}
               </div>
               <div className="sponsor-horizontal-grid">
-                {availableSponsors.filter(s => {
-                  const matchesState = selectedState === "All States" || s.state === selectedState;
-                  const matchesSearch = 
-                    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                    s.focus.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    s.city.toLowerCase().includes(searchTerm.toLowerCase());
-                  return matchesState && matchesSearch;
-                }).map(s => (
+                {latestSponsors.map(s => (
                   <div key={s.id} className="sponsor-card-modern">
                     <div className="sponsor-badge">Sponsor</div>
                     <h3 className="sponsor-name">
@@ -512,21 +615,14 @@ const OrganizerDashboard = () => {
                         onClick={() => navigate(`/profile/${s.id}`)}
                       >{s.full_name || s.name}</span>
                     </h3>
-                    <p className="sponsor-meta">{s.focus} â€¢ {s.city}</p>
+                    <p className="sponsor-meta">{s.focus} | {s.city}</p>
                     <div className="sponsor-card-actions">
                       <button className="view-deal-btn" onClick={() => { setSelectedSponsor(s); setIsSponsorDetailsOpen(true); }}>Propose Partnership</button>
-                      <button className="mini-profile-btn" onClick={() => navigate(`/profile/${s.id}`)}>ðŸ‘¤ Profile</button>
+                      <button className="mini-profile-btn" onClick={() => navigate(`/profile/${s.id}`)}>Profile</button>
                     </div>
                   </div>
                 ))}
-                {availableSponsors.filter(s => {
-                  const matchesState = selectedState === "All States" || s.state === selectedState;
-                  const matchesSearch =
-                    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    s.focus.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    s.city.toLowerCase().includes(searchTerm.toLowerCase());
-                  return matchesState && matchesSearch;
-                }).length === 0 && (
+                {filteredSponsors.length === 0 && (
                   <EmptyState
                     title="No sponsors match these filters"
                     description="Try broadening state or search terms."
@@ -549,10 +645,10 @@ const OrganizerDashboard = () => {
                     <div className="event-row-info">
                       <h4>{e.title}</h4>
                       <div className="event-row-meta">
-                        <span>ðŸ“ {e.city}</span>
-                        <span className="divider">â€¢</span>
-                        <span>ðŸ’° {formatCurrency(e.budget, e.currency)}</span>
-                        {(e.media_items?.length > 0) && <span className="media-badge">ðŸ–¼ï¸ {e.media_items.length} Photos</span>}
+                        <span>Location: {e.city}</span>
+                        <span className="divider">|</span>
+                        <span>Budget: {formatCurrency(e.budget, e.currency)}</span>
+                        {(e.media_items?.length > 0) && <span className="media-badge">{e.media_items.length} Photos</span>}
                       </div>
                     </div>
                     <div className="event-row-actions">
@@ -561,9 +657,9 @@ const OrganizerDashboard = () => {
                         onClick={() => setSelectedEventForMedia(selectedEventForMedia === e.id ? null : e.id)}
                         title="Manage Portfolio"
                       >
-                        {selectedEventForMedia === e.id ? "âœ• Gallery" : "ðŸ–¼ï¸ Gallery"}
+                        {selectedEventForMedia === e.id ? "Close Gallery" : "Gallery"}
                       </button>
-                      <button className="delete-action-pill" onClick={() => { setEventToDelete(e.id); setIsDeleteDialogOpen(true); }} title="Remove Event">ðŸ—‘ï¸</button>
+                      <button className="delete-action-pill" onClick={() => { setEventToDelete(e.id); setIsDeleteDialogOpen(true); }} title="Remove Event">Delete</button>
                     </div>
                   </div>
                 ))}
@@ -578,7 +674,7 @@ const OrganizerDashboard = () => {
           return ev ? (
             <MediaPortfolio
               items={ev.media_items || []}
-              title={`${ev.title} â€” Portfolio`}
+              title={`${ev.title} - Portfolio`}
               canEdit={Number(ev.organizer_id) === Number(currentUser.id)}
               onAdd={(item) => handleAddMedia(ev.id, item)}
               onDelete={(idx) => handleDeleteMedia(ev.id, idx)}
@@ -667,12 +763,50 @@ const OrganizerDashboard = () => {
             onClose={() => setShowDocument(null)} 
         />
       )}
+      {selectedPipelineDeal && (
+        <ActivityProgressModal
+          deal={selectedPipelineDeal}
+          role="organizer"
+          isReviewed={Boolean(reviewedDeals[selectedPipelineDeal.id])}
+          onClose={closePipelineDealModal}
+          onOpenDetails={() => openDealEventDetails(selectedPipelineDeal)}
+          actions={{
+            accept: !selectedPipelineDeal.organizerAccepted
+              ? () => handleDealAction(selectedPipelineDeal.id, acceptDeal, { role: "organizer", accept: true })
+              : null,
+            sign:
+              selectedPipelineDeal.paymentDone && !selectedPipelineDeal.organizerSigned
+                ? () => handleStartSigning(selectedPipelineDeal)
+                : null,
+            review:
+              selectedPipelineDeal.status === "closed" && !reviewedDeals[selectedPipelineDeal.id]
+                ? () => {
+                    setReviewDeal(selectedPipelineDeal);
+                    setShowReviewModal(true);
+                  }
+                : null,
+            agreement: selectedPipelineDeal.organizerSigned ? () => setShowDocument({ type: "agreement", deal: selectedPipelineDeal }) : null,
+            invoice: selectedPipelineDeal.paymentDone ? () => setShowDocument({ type: "invoice", deal: selectedPipelineDeal }) : null,
+            chat: () => setActiveDealChat(selectedPipelineDeal),
+          }}
+          formatCurrency={formatCurrency}
+        />
+      )}
+      {selectedEventDetails && (
+        <EventDetailModal
+          event={selectedEventDetails}
+          deal={selectedEventDeal}
+          onClose={() => {
+            setSelectedEventDetails(null);
+            setSelectedEventDeal(null);
+          }}
+          onProposeDeal={() => {}}
+          onChat={setActiveDealChat}
+          formatCurrency={formatCurrency}
+        />
+      )}
     </div>
   );
 };
 
 export default OrganizerDashboard;
-
-
-
-

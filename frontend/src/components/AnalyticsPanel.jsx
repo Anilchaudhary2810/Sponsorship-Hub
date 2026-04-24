@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import "./AnalyticsPanel.css";
 
-const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ec4899", "#06b6d4"];
+const COLORS = ["#f97316", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444"];
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -125,8 +125,8 @@ const AnalyticsPanel = ({
             <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -30, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorDeals" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
@@ -137,7 +137,7 @@ const AnalyticsPanel = ({
               <XAxis dataKey="month" tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="deals" name="Deals" stroke="#6366f1" strokeWidth={2} fill="url(#colorDeals)" />
+              <Area type="monotone" dataKey="deals" name="Deals" stroke="#f97316" strokeWidth={2} fill="url(#colorDeals)" />
               <Area type="monotone" dataKey="revenue" name={role === "sponsor" ? "Spent (₹K)" : "Earned (₹K)"} stroke="#10b981" strokeWidth={2} fill="url(#colorRevenue)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -165,7 +165,7 @@ const AnalyticsPanel = ({
                   ))}
                 </Pie>
                 <Tooltip formatter={(v, n) => [v, n]} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: "var(--muted-foreground)" }} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -180,7 +180,7 @@ const AnalyticsPanel = ({
               <XAxis dataKey="month" tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="closed" name="Closed" fill="#6366f1" radius={[6, 6, 0, 0]}>
+              <Bar dataKey="closed" name="Closed" fill="#f97316" radius={[6, 6, 0, 0]}>
                 {monthlyData.map((_, index) => (
                   <Cell key={index} fill={COLORS[index % COLORS.length]} />
                 ))}

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import {
@@ -62,12 +62,14 @@ const INTEGRATION_PROVIDERS = ["hubspot", "sheets", "slack", "email", "calendar"
 
 const ScaleOpsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const currentUser = useMemo(() => JSON.parse(localStorage.getItem("currentUser") || "{}"), []);
   const isAdmin = String(currentUser.role || "").toLowerCase() === "admin";
   const tabs = useMemo(
     () => (isAdmin ? [...BASE_TABS, { id: "admin", label: "Admin Ops" }] : BASE_TABS),
     [isAdmin]
   );
+  const allowedTabIds = useMemo(() => tabs.map((tab) => tab.id), [tabs]);
   const [activeTab, setActiveTab] = useState("proposal");
   const [loading, setLoading] = useState(false);
 
@@ -252,6 +254,14 @@ const ScaleOpsPage = () => {
   useEffect(() => {
     loadBaseData();
   }, []);
+
+  useEffect(() => {
+    const requestedTab = String(new URLSearchParams(location.search).get("tab") || "").toLowerCase();
+    if (!requestedTab) return;
+    if (allowedTabIds.includes(requestedTab)) {
+      setActiveTab(requestedTab);
+    }
+  }, [location.search, allowedTabIds]);
 
   useEffect(() => {
     if (selectedDealId) {

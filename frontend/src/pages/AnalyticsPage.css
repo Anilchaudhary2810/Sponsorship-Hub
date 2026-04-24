@@ -5,8 +5,9 @@
 
 .analytics-page-container {
   padding: 40px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .analytics-page-header {

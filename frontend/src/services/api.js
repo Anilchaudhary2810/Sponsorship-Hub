@@ -9,6 +9,7 @@ export const updateUser = (id, updates) => api.put(`/users/${id}/`, updates);
 export const forgotPassword = (data) => api.post("/auth/request-password-reset", data);
 export const resetPassword = (data) => api.post("/auth/reset-password", data);
 export const verifyEmailToken = (token) => api.get("/auth/verify-email", { params: { token } });
+export const resendVerificationEmail = (data) => api.post("/auth/resend-verification", data);
 export const fetchUserProfile = (id) => api.get(`/users/${id}/profile`);
 export const getUsersByRole = (role) => api.get(`/users/?role=${role}`);
 export const fetchPublicStats = () => api.get("/stats/public");
@@ -121,6 +122,14 @@ export const fetchReviews = () => api.get("/reviews/");
 export const fetchReviewsForDeal = (dealId) => api.get(`/reviews/${dealId}`);
 export const fetchMyReviews = () => api.get("/reviews/my"); // { "dealId": rating }
 export const fetchChatHistory = (dealId) => api.get(`/chat/history/${dealId}`);
+
+// --- AI assistant ---
+export const fetchAIContext = (params = {}) => api.get("/ai-assistant/context", { params });
+export const fetchPublicAIContext = (params = {}) => api.get("/ai-assistant/public-context", { params });
+export const fetchAIHistory = (limit = 80) => api.get("/ai-assistant/history", { params: { limit } });
+export const clearAIHistory = () => api.delete("/ai-assistant/history");
+export const sendAIMessage = (data) => api.post("/ai-assistant/message", data);
+export const sendPublicAIMessage = (data) => api.post("/ai-assistant/public-message", data);
 
 // --- notifications ---
 export const fetchNotifications = () => api.get("/notifications/");

@@ -38,7 +38,7 @@
   font-size: 24px;
   font-weight: 900;
   margin: 0 auto 20px;
-  box-shadow: 0 0 24px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 24px hsla(var(--color-primary), 0.4);
 }
 
 .login-title {
@@ -104,12 +104,12 @@
   cursor: pointer;
   margin-top: 12px;
   transition: var(--transition);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px hsla(var(--color-primary), 0.3);
 }
 
 .login-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 24px hsla(var(--color-primary), 0.4);
 }
 
 .login-footer {

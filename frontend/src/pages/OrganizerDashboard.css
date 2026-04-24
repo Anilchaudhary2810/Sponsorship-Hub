@@ -1,7 +1,8 @@
 .organizer-container {
   padding: 40px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   min-height: calc(100vh - 72px);
   background: var(--background);
 }
@@ -35,9 +36,9 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  color: #818cf8;
+  background: hsla(var(--color-primary), 0.1);
+  border: 1px solid hsla(var(--color-primary), 0.3);
+  color: var(--primary-strong);
   border-radius: 12px;
   font-weight: 700;
   font-size: 13px;
@@ -50,7 +51,7 @@
   color: white;
   border-color: transparent;
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 15px hsla(var(--color-primary), 0.4);
 }
 
 .subtitle {
@@ -73,12 +74,12 @@
   border: none;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px hsla(var(--color-primary), 0.3);
 }
 
 .create-primary-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 24px hsla(var(--color-primary), 0.4);
 }
 
 
@@ -196,7 +197,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 14px center;
   background-size: 16px;
@@ -218,7 +219,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 14px center;
   background-size: 16px;
@@ -408,8 +409,19 @@
 .mini-action-btn.primary { background: var(--primary); color: #fff; }
 .mini-action-btn.reject { background: rgba(239, 68, 68, 0.12); color: #dc2626; border-color: rgba(239, 68, 68, 0.3); }
 .mini-action-btn.chat { background: transparent; color: var(--foreground); border: 1px solid var(--border); }
-.mini-action-btn.primary-outline { background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.35); color: #818cf8; }
+.mini-action-btn.primary-outline { background: hsla(var(--color-primary), 0.1); border: 1.5px solid hsla(var(--color-primary), 0.55); color: var(--primary-strong); }
 .mini-action-btn.legal-outline { background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.3); color: #34d399; }
+
+.mini-action-btn.primary-outline:hover:not(:disabled) {
+  background: hsla(var(--color-primary), 0.18);
+  border-color: hsla(var(--color-primary), 0.7);
+}
+
+.mini-action-btn.primary-outline:disabled,
+.mini-action-btn.legal-outline:disabled {
+  opacity: 0.72;
+  border-style: solid;
+}
 
 .deal-pipeline-grid {
   display: grid;
@@ -617,12 +629,12 @@
   cursor: pointer;
   transition: var(--transition);
   font-size: 16px;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px hsla(var(--color-primary), 0.3);
 }
 
 .publish-btn-wide:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 24px hsla(var(--color-primary), 0.4);
 }
 
 .delete-dialog-overlay {
@@ -757,8 +769,8 @@
 }
 
 .delete-confirm-btn.proposal-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+  background: var(--primary-gradient);
+  box-shadow: 0 4px 15px hsla(var(--color-primary), 0.4);
 }
 
 .delete-confirm-btn:disabled {
@@ -777,7 +789,7 @@
   margin-bottom: 1.5rem;
   text-align: center;
   display: block;
-  filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.3));
+  filter: drop-shadow(0 0 15px hsla(var(--color-primary), 0.3));
 }
 
 .glass-morphism {
@@ -819,7 +831,7 @@
 
 .selector-item:hover {
   border-color: var(--primary);
-  background: rgba(59, 130, 246, 0.1);
+  background: hsla(var(--color-primary), 0.1);
 }
 
 .selector-item.active {
@@ -884,20 +896,20 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  border: 1px solid rgba(99,102,241,0.3);
-  background: rgba(99,102,241,0.1);
-  color: #818cf8;
+  border: 1px solid hsla(var(--color-primary), 0.3);
+  background: hsla(var(--color-primary), 0.1);
+  color: var(--primary-strong);
   transition: all 0.2s;
 }
 .media-toggle-btn:hover {
-  background: rgba(99,102,241,0.2);
-  border-color: rgba(99,102,241,0.5);
+  background: hsla(var(--color-primary), 0.2);
+  border-color: hsla(var(--color-primary), 0.5);
 }
 
 .media-badge {
-  background: rgba(99,102,241,0.1);
-  color: #818cf8;
-  border: 1px solid rgba(99,102,241,0.2);
+  background: hsla(var(--color-primary), 0.1);
+  color: var(--primary-strong);
+  border: 1px solid hsla(var(--color-primary), 0.2);
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 11px;
@@ -924,9 +936,9 @@
   width: 100%;
 }
 .mini-profile-btn:hover {
-  background: rgba(99,102,241,0.15);
-  color: #818cf8;
-  border-color: rgba(99,102,241,0.3);
+  background: hsla(var(--color-primary), 0.15);
+  color: var(--primary-strong);
+  border-color: hsla(var(--color-primary), 0.3);
 }
 
 /* === REVIEWED BADGE === */

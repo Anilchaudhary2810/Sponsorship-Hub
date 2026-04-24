@@ -47,6 +47,7 @@ const Navbar = ({ role }) => {
     const raw = localStorage.getItem("currentUser");
     return raw ? JSON.parse(raw) : {};
   });
+  const isAdmin = String(currentUser.role || role || "").toLowerCase() === "admin";
 
   const userId = currentUser.id;
 
@@ -218,6 +219,7 @@ const Navbar = ({ role }) => {
     sponsor: "Company",
     organizer: "Organization",
     influencer: "Organization",
+    admin: "Workspace",
   }[role] || "Company";
 
   const roleValue = role === "sponsor" ? profile.companyName || "-" : profile.organizationName || "-";
@@ -231,6 +233,7 @@ const Navbar = ({ role }) => {
           onClick={() => {
             if (role === "sponsor") navigate("/sponsor-dashboard");
             else if (role === "organizer") navigate("/organizer-dashboard");
+            else if (role === "admin") navigate("/scale-ops?tab=admin");
             else navigate("/influencer-dashboard");
           }}
           style={{ cursor: "pointer" }}
@@ -247,11 +250,22 @@ const Navbar = ({ role }) => {
             ? "Sponsor Console"
             : role === "organizer"
               ? "Organizer Command Center"
+              : role === "admin"
+                ? "Admin Operations"
               : "Influencer Studio"}
         </span>
       </div>
 
       <div className="navbar-right">
+        {isAdmin && (
+          <button
+            type="button"
+            className="admin-nav-btn"
+            onClick={() => navigate("/scale-ops?tab=admin")}
+          >
+            Admin Ops
+          </button>
+        )}
         <NotificationBell />
 
         <div className="profile-wrap" ref={profilePanelRef}>

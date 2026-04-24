@@ -31,6 +31,7 @@ const Login = () => {
       if (role === "sponsor") navigate("/sponsor-dashboard");
       else if (role === "organizer") navigate("/organizer-dashboard");
       else if (role === "influencer") navigate("/influencer-dashboard");
+      else if (role === "admin") navigate("/scale-ops?tab=admin");
       // If valid role not found, we just stay at login
     }
   }, [navigate]);
@@ -72,6 +73,7 @@ const Login = () => {
       if (role === "sponsor") navigate("/sponsor-dashboard");
       else if (role === "organizer") navigate("/organizer-dashboard");
       else if (role === "influencer") navigate("/influencer-dashboard");
+      else if (role === "admin") navigate("/scale-ops?tab=admin");
       else navigate("/login");
     } catch (err) {
       console.warn("Login request failed", {

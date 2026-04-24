@@ -36,6 +36,7 @@ class User(Base):
     # Auth Hardening
     is_verified = Column(Boolean, default=False, nullable=False)
     verification_token = Column(String(255), nullable=True)
+    verification_token_expires_at = Column(DateTime, nullable=True)
     reset_password_token = Column(String(255), nullable=True)
     reset_password_expires_at = Column(DateTime, nullable=True)
     refresh_token = Column(String(255), nullable=True, index=True)
@@ -77,6 +78,7 @@ class User(Base):
     reviews_as_reviewer = relationship("DealReview", foreign_keys="DealReview.reviewer_id", back_populates="reviewer")
     reviews_as_target = relationship("DealReview", foreign_keys="DealReview.target_user_id", back_populates="target_user")
     kyc_submissions = relationship("KYCSubmission", foreign_keys="KYCSubmission.user_id", back_populates="user", cascade="all, delete-orphan")
+    ai_chat_messages = relationship("AIChatMessage", back_populates="user", cascade="all, delete-orphan")
 
 
 class Campaign(Base):
@@ -212,6 +214,21 @@ class ChatMessage(Base):
 
     deal = relationship("Deal")
     sender = relationship("User")
+
+
+class AIChatMessage(Base):
+    __tablename__ = "ai_chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String(20), nullable=False, index=True)  # user/assistant
+    content = Column(Text, nullable=False)
+    route_path = Column(String(255), nullable=True, index=True)
+    page_title = Column(String(200), nullable=True)
+    context_json = Column(JSON, default=dict)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+
+    user = relationship("User", back_populates="ai_chat_messages")
 
 
 class Notification(Base):
@@ -488,4 +505,3 @@ class IntegrationEvent(Base):
     created_at = Column(DateTime, server_default=func.now(), index=True)
 
     connection = relationship("IntegrationConnection")
-

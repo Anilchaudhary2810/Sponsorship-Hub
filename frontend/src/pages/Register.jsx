@@ -118,10 +118,11 @@ const Register = () => {
         resp.data?.message || "Registration successful. Please verify your email before login.";
       toast.success(message);
       const previewToken = resp.data?.verification_token_preview;
+      const emailParam = encodeURIComponent(formData.email.trim());
       if (previewToken) {
-        navigate(`/verify-email?token=${encodeURIComponent(previewToken)}`);
+        navigate(`/verify-email?token=${encodeURIComponent(previewToken)}&email=${emailParam}`);
       } else {
-        navigate("/login");
+        navigate(`/verify-email?email=${emailParam}`);
       }
     } catch (err) {
       console.warn("Registration request failed", {

@@ -1,6 +1,6 @@
 from __future__ import annotations
 import datetime
-from pydantic import BaseModel, EmailStr, validator, ConfigDict
+from pydantic import BaseModel, EmailStr, validator, ConfigDict, Field
 from typing import Optional, List, Literal, Any
 from decimal import Decimal
 
@@ -85,6 +85,7 @@ class AdminUserUpdate(PublicUserUpdate):
 class SystemUserUpdate(AdminUserUpdate):
     refresh_token: Optional[str] = None
     verification_token: Optional[str] = None
+    verification_token_expires_at: Optional[datetime.datetime] = None
     reset_password_token: Optional[str] = None
     reset_password_expires_at: Optional[datetime.datetime] = None
 
@@ -138,11 +139,21 @@ class RegisterResponse(BaseModel):
     user: UserResponse
     requires_verification: bool = True
     verification_token_preview: Optional[str] = None
+    verification_email_sent: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
 class TokenRefreshRequest(BaseModel):
     refresh_token: Optional[str] = None
+
+
+class VerificationResendRequest(BaseModel):
+    email: EmailStr
+
+
+class VerificationResendResponse(BaseModel):
+    message: str
+    verification_token_preview: Optional[str] = None
 
 class PasswordResetRequest(BaseModel):
     email: EmailStr
@@ -344,6 +355,46 @@ class ChatMessageResponse(ChatMessageBase):
     timestamp: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AIContextRequest(BaseModel):
+    path: str = "/"
+    page_title: Optional[str] = None
+    page_data: dict[str, Any] = Field(default_factory=dict)
+
+
+class AIMessageRequest(AIContextRequest):
+    message: str
+    history_limit: int = 12
+
+
+class AIChatHistoryItem(BaseModel):
+    id: int
+    role: Literal["user", "assistant"]
+    content: str
+    route_path: Optional[str] = None
+    page_title: Optional[str] = None
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AIContextResponse(BaseModel):
+    path: str
+    title: str
+    role: str
+    capabilities: list[str] = Field(default_factory=list)
+    user_stats: dict[str, Any] = Field(default_factory=dict)
+    global_stats: dict[str, Any] = Field(default_factory=dict)
+    recent_items: list[dict[str, Any]] = Field(default_factory=list)
+    page_data: dict[str, Any] = Field(default_factory=dict)
+    confidentiality_note: str
+
+
+class AIMessageResponse(BaseModel):
+    reply: str
+    context: AIContextResponse
+    history: list[AIChatHistoryItem] = Field(default_factory=list)
 
 
 # ------------------------------------------------

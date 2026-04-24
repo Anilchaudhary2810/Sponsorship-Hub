@@ -32,6 +32,7 @@ from .routers import (
     retention_router,
     reporting_router,
     integrations_router,
+    ai_assistant_router,
 )
 
 # ✅ Import limiter ONLY from core
@@ -83,6 +84,8 @@ def run_startup_migrations():
                     conn.execute(text("UPDATE users SET plan_status = 'active' WHERE plan_status IS NULL"))
                 if "plan_renewal_at" not in user_columns:
                     conn.execute(text("ALTER TABLE users ADD COLUMN plan_renewal_at TIMESTAMP"))
+                if "verification_token_expires_at" not in user_columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN verification_token_expires_at TIMESTAMP"))
         if 'deals' in inspector.get_table_names():
             columns = [c['name'] for c in inspector.get_columns('deals')]
             if 'stripe_payment_intent_id' in columns and 'razorpay_payment_id' not in columns:
@@ -182,6 +185,7 @@ app.include_router(collaboration_router)
 app.include_router(retention_router)
 app.include_router(reporting_router)
 app.include_router(integrations_router)
+app.include_router(ai_assistant_router)
 
 
 @app.on_event("startup")
@@ -298,12 +302,16 @@ if "*" in ALLOWED_ORIGINS:
     ALLOWED_ORIGINS = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
         "https://sponsorship-hub.vercel.app"
     ]
 
 for _origin in [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
     "https://sponsorship-hub.vercel.app"
 ]:
     if _origin not in ALLOWED_ORIGINS:

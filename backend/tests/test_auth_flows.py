@@ -1,7 +1,6 @@
 """
 Auth flow tests – covers email verification and password reset flows.
 """
-import pytest
 import secrets
 from datetime import datetime, timedelta
 import importlib
@@ -56,6 +55,65 @@ def test_email_verification_sets_is_verified(client, db):
     db.refresh(user)
     assert user.is_verified is True
     assert user.verification_token is None  # token should be cleared
+    assert user.verification_token_expires_at is None
+
+
+def test_email_verification_expired_token_rejected(client, db):
+    """Expired verification tokens must be rejected."""
+    from backend.models import User
+
+    token = secrets.token_urlsafe(32)
+    user = User(
+        full_name="Expired Verify",
+        email="expired_verify@example.com",
+        password="hashed",
+        role="organizer",
+        is_verified=False,
+        verification_token=token,
+        verification_token_expires_at=datetime.utcnow() - timedelta(minutes=1),
+    )
+    db.add(user)
+    db.commit()
+
+    response = client.get(f"/auth/verify-email?token={token}")
+    assert response.status_code == 401
+
+    db.refresh(user)
+    assert user.is_verified is False
+    assert user.verification_token is None
+    assert user.verification_token_expires_at is None
+
+
+def test_resend_verification_rotates_token_and_expiry(client, db, monkeypatch):
+    """Resending verification should issue a new token and fresh expiry for unverified users."""
+    from backend.models import User
+
+    auth_router_module = importlib.import_module("backend.routers.auth_router")
+    monkeypatch.setattr(auth_router_module, "_should_send_verification_email", lambda: False)
+
+    user = User(
+        full_name="Need Resend",
+        email="resend_verify@example.com",
+        password="hashed",
+        role="sponsor",
+        is_verified=False,
+        verification_token="old-token",
+        verification_token_expires_at=datetime.utcnow() - timedelta(hours=1),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    old_token = user.verification_token
+
+    response = client.post("/auth/resend-verification", json={"email": user.email})
+    assert response.status_code == 200
+    assert "pending verification" in response.json()["message"].lower()
+
+    db.refresh(user)
+    assert user.verification_token is not None
+    assert user.verification_token != old_token
+    assert user.verification_token_expires_at is not None
+    assert user.verification_token_expires_at > datetime.utcnow()
 
 
 # ---------------------------------------------------------------------------
