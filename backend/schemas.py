@@ -331,6 +331,13 @@ class PaymentCheckoutConfigResponse(BaseModel):
     provider: str = "razorpay"
     key_id: Optional[str] = None
 
+
+class PaymentVerifyRequest(BaseModel):
+    deal_id: int
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
 class DealSign(BaseModel):
     role: RoleType
     signature: str

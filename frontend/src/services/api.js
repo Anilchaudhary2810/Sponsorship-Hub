@@ -105,8 +105,10 @@ export const createDeal = (data) => api.post("/deals/", data);
 export const updateDeal = (id, data) => api.put(`/deals/${id}`, data);
 export const deleteDeal = (id) => api.delete(`/deals/${id}`);
 export const acceptDeal = (id, action) => api.put(`/deals/${id}/accept`, action);
-export const createPaymentOrder = (id) => api.post(`/payments/create-order?deal_id=${id}`);
+export const createPaymentOrder = (id, options = {}) =>
+  api.post(`/payments/create-order?deal_id=${id}${options?.forceNew ? "&force_new=true" : ""}`);
 export const fetchPaymentCheckoutConfig = () => api.get("/payments/checkout-config");
+export const verifyPayment = (data) => api.post("/payments/verify", data);
 // Backward-compatible alias: now creates payment order instead of manual payment marking.
 export const markPaymentDone = (id, _payment) => createPaymentOrder(id);
 export const signDeal = (id, sign) => api.put(`/deals/${id}/sign`, sign);

@@ -69,8 +69,20 @@ def _create_provider_order_or_mock(
     key_id = settings.RAZORPAY_KEY_ID
     key_secret = settings.RAZORPAY_KEY_SECRET
     env = (settings.ENV or "").lower()
+    has_key_id = bool(key_id)
+    has_key_secret = bool(key_secret)
 
-    if key_id and key_secret and razorpay is not None:
+    if has_key_id != has_key_secret:
+        raise exceptions.PaymentError(
+            "Incomplete Razorpay configuration: both RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required."
+        )
+
+    if has_key_id and has_key_secret and razorpay is None:
+        raise exceptions.PaymentError(
+            "Razorpay SDK is not installed on the backend runtime. Install dependency: pip install razorpay"
+        )
+
+    if has_key_id and has_key_secret and razorpay is not None:
         try:
             client = razorpay.Client(auth=(key_id, key_secret))
             order = client.order.create(
@@ -112,7 +124,8 @@ async def get_checkout_config(
 @limiter.limit("15/minute")
 async def create_razorpay_order(
     request: Request,
-    deal_id: int, 
+    deal_id: int,
+    force_new: bool = False,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -132,13 +145,21 @@ async def create_razorpay_order(
     # Check for existing order to ensure idempotency
     existing_payment_id = getattr(deal, "razorpay_payment_id", None)
     existing_payment_status = str(getattr(deal, "payment_status", ""))
-    if isinstance(existing_payment_id, str) and existing_payment_id and existing_payment_status == "created":
+    if (
+        not force_new
+        and isinstance(existing_payment_id, str)
+        and existing_payment_id
+        and existing_payment_status == "created"
+    ):
         # In a real app, we might fetch from Razorpay here
         pass
     else:
         try:
             # Amount in paise (1 INR = 100 paise)
             deal_amount = float(getattr(deal, "payment_amount", 0) or 0)
+            if deal_amount <= 0:
+                hydrated_amount = crud.hydrate_deal_payment_amount(db, deal)
+                deal_amount = float(hydrated_amount or 0)
             if deal_amount <= 0:
                 raise exceptions.ValidationError("Deal amount must be greater than zero before creating payment order")
             amount = int(deal_amount * 100)
@@ -159,6 +180,58 @@ async def create_razorpay_order(
 
     db.refresh(deal)
     return deal
+
+
+@router.post("/verify", response_model=schemas.DealResponse)
+@limiter.limit("25/minute")
+async def verify_razorpay_payment(
+    request: Request,
+    payload: schemas.PaymentVerifyRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    deal = db.query(models.Deal).filter(models.Deal.id == payload.deal_id).first()
+    if not deal:
+        raise exceptions.BusinessLogicError("Deal not found")
+
+    current_user_id = int(getattr(current_user, "id", 0))
+    deal_sponsor_id = int(getattr(deal, "sponsor_id", 0) or 0)
+    if current_user_id != deal_sponsor_id:
+        raise exceptions.AuthorizationError("Only the sponsor can verify payment for this deal")
+
+    if bool(getattr(deal, "payment_done", False)):
+        db.refresh(deal)
+        return deal
+
+    order_id = _to_str(payload.razorpay_order_id)
+    payment_id = _to_str(payload.razorpay_payment_id)
+    signature = _to_str(payload.razorpay_signature)
+
+    if not order_id or not payment_id or not signature:
+        raise exceptions.ValidationError("Missing payment verification fields")
+
+    expected_order_id = _to_str(getattr(deal, "razorpay_payment_id", ""))
+    if expected_order_id and expected_order_id != order_id:
+        raise exceptions.PaymentError("Payment order mismatch. Please retry checkout from latest deal state.")
+
+    key_secret = settings.RAZORPAY_KEY_SECRET
+    if not key_secret:
+        raise exceptions.PaymentError("RAZORPAY_KEY_SECRET is required for payment signature verification")
+
+    signed_payload = f"{order_id}|{payment_id}".encode("utf-8")
+    expected_signature = hmac.new(
+        key_secret.encode("utf-8"),
+        signed_payload,
+        hashlib.sha256,
+    ).hexdigest()
+
+    if not hmac.compare_digest(expected_signature, signature):
+        raise exceptions.PaymentError("Invalid payment signature")
+
+    updated = crud.deal_payment_webhook(db, int(payload.deal_id), payment_id, "succeeded")
+    if not updated:
+        raise exceptions.BusinessLogicError("Unable to update deal payment state")
+    return updated
 
 @router.post("/webhook")
 @limiter.limit("120/minute")

@@ -25,6 +25,7 @@ import {
   fetchPaymentCheckoutConfig,
   getAvailableInfluencers,
   getAvailableSponsors,
+  verifyPayment,
   signDeal as signDealFn,
 } from "../services/api";
 import "./ActivityCenterPage.css";
@@ -212,12 +213,18 @@ const ActivityCenterPage = () => {
   };
 
   const handleStartPayment = (deal) => {
-    const serverAmount = Number(deal.paymentAmount);
-    if (!Number.isFinite(serverAmount) || serverAmount <= 0) {
+    const resolvedAmount =
+      Number(deal.paymentAmount) ||
+      Number(deal.event?.raw_budget) ||
+      Number(deal.event?.budget) ||
+      Number(deal.campaign?.budget) ||
+      0;
+
+    if (!Number.isFinite(resolvedAmount) || resolvedAmount <= 0) {
       toast.error("Deal amount is not configured yet. Please refresh or contact support.");
       return;
     }
-    setPaymentDeal({ ...deal, paymentAmount: serverAmount });
+    setPaymentDeal({ ...deal, paymentAmount: resolvedAmount });
     setShowPaymentModal(true);
   };
 
@@ -225,7 +232,7 @@ const ActivityCenterPage = () => {
     if (!paymentDeal?.id) return;
     try {
       const [orderResp, configResp] = await Promise.all([
-        createPaymentOrder(paymentDeal.id),
+        createPaymentOrder(paymentDeal.id, { forceNew: true }),
         fetchPaymentCheckoutConfig(),
       ]);
 
@@ -235,8 +242,16 @@ const ActivityCenterPage = () => {
       const amountPaise = Math.round(Number(orderData.payment_amount || paymentDeal.paymentAmount || 0) * 100);
       const currency = orderData.currency || paymentDeal.currency || "INR";
 
-      if (!orderId || !keyId || amountPaise <= 0) {
-        toast.error("Unable to start gateway checkout. Please verify payment configuration.");
+      if (!keyId) {
+        toast.error("Payment gateway key is missing. Set RAZORPAY_KEY_ID in backend environment.");
+        return;
+      }
+      if (!orderId) {
+        toast.error("Payment order was not created. Please try again.");
+        return;
+      }
+      if (amountPaise <= 0) {
+        toast.error("Invalid payment amount for this deal. Please refresh and retry.");
         return;
       }
 
@@ -255,9 +270,24 @@ const ActivityCenterPage = () => {
         order_id: orderId,
         name: "Sponsorship Hub",
         description: `Deal #${orderData.id || paymentDeal.id} checkout`,
-        handler: async () => {
-          toast.success("Payment authorized. Waiting for secure webhook confirmation.");
-          await loadData();
+        handler: async (gatewayPayload) => {
+          try {
+            await verifyPayment({
+              deal_id: paymentDeal.id,
+              razorpay_order_id: gatewayPayload?.razorpay_order_id || orderId,
+              razorpay_payment_id: gatewayPayload?.razorpay_payment_id,
+              razorpay_signature: gatewayPayload?.razorpay_signature,
+            });
+            toast.success("Payment verified and pipeline updated.");
+            await loadData();
+            await openPipelineDeal(paymentDeal.id);
+          } catch (verifyError) {
+            const verifyMessage =
+              verifyError?.response?.data?.message ||
+              verifyError?.response?.data?.detail ||
+              "Payment authorized, but verification failed. Please refresh and retry.";
+            toast.error(verifyMessage);
+          }
         },
         modal: {
           ondismiss: () => {
@@ -274,9 +304,23 @@ const ActivityCenterPage = () => {
         },
       });
 
+      rzp.on("payment.failed", (response) => {
+        const gatewayMessage =
+          response?.error?.description ||
+          response?.error?.reason ||
+          response?.error?.source ||
+          "Payment failed. Please try again.";
+        toast.error(gatewayMessage);
+      });
+
       rzp.open();
-    } catch {
-      toast.error("Unable to open payment gateway. Please try again.");
+    } catch (error) {
+      const apiMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+        error?.message ||
+        "Unable to open payment gateway. Please try again.";
+      toast.error(apiMessage);
     }
   };
 
