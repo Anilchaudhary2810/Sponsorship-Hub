@@ -97,6 +97,14 @@ const Login = () => {
 
   return (
     <div className="login-container">
+      <button
+        type="button"
+        className="login-home-top-btn"
+        onClick={() => navigate("/")}
+      >
+        ← Back to Homepage
+      </button>
+
       <div className="login-card">
         <div className="login-header">
           <div className="login-logo">SH</div>
@@ -150,11 +158,6 @@ const Login = () => {
             Don't have an account?{" "}
             <span className="register-link-span" onClick={() => navigate("/register")}>
               Create one for free
-            </span>
-          </p>
-          <p style={{ marginTop: '0.5rem' }}>
-            <span className="register-link-span" style={{ fontSize: '0.8rem', opacity: 0.7 }} onClick={() => navigate("/")}>
-              Back to Homepage
             </span>
           </p>
         </div>

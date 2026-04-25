@@ -144,6 +144,14 @@ const Register = () => {
 
   return (
     <div className="register-container">
+      <button
+        type="button"
+        className="register-home-top-btn"
+        onClick={() => navigate("/")}
+      >
+        ← Back to Homepage
+      </button>
+
       <div className="register-card">
         <h2 className="register-title">Register</h2>
 
@@ -222,11 +230,6 @@ const Register = () => {
           <button type="submit" className="register-button">Register as {role.charAt(0).toUpperCase() + role.slice(1)}</button>
           <p className="register-link">
             Already have an account? <span onClick={() => navigate("/login")}>Login</span>
-          </p>
-          <p className="register-link" style={{ marginTop: '0.5rem' }}>
-            <span style={{ fontSize: '0.8rem', opacity: 0.7 }} onClick={() => navigate("/")}>
-              Back to Homepage
-            </span>
           </p>
         </form>
       </div>
