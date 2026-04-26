@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session, joinedload
 from passlib.context import CryptContext  # type: ignore[import]
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 
 from . import models, schemas, exceptions
 
@@ -150,8 +151,90 @@ def get_deals(db: Session, skip: int = 0, limit: int = 100):
     ).offset(skip).limit(limit).all()
 
 
+def _to_decimal(value: object, default: Decimal = Decimal("0")) -> Decimal:
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return default
+
+
+def _infer_deal_amount_and_currency(
+    db: Session,
+    deal_type: object,
+    event_id: object = None,
+    campaign_id: object = None,
+) -> tuple[Decimal, str]:
+    inferred_amount = Decimal("0")
+    inferred_currency = "INR"
+    deal_type_str = str(deal_type or "")
+
+    if deal_type_str == "sponsorship":
+        try:
+            event_id_int = int(event_id) if event_id is not None else 0
+        except (TypeError, ValueError):
+            event_id_int = 0
+        if event_id_int > 0:
+            event = db.query(models.Event).filter(models.Event.id == event_id_int).first()
+            if event:
+                inferred_amount = _to_decimal(getattr(event, "raw_budget", 0))
+                event_currency = getattr(event, "currency", None)
+                if isinstance(event_currency, str) and event_currency.strip():
+                    inferred_currency = event_currency.strip().upper()
+    elif deal_type_str == "promotion":
+        try:
+            campaign_id_int = int(campaign_id) if campaign_id is not None else 0
+        except (TypeError, ValueError):
+            campaign_id_int = 0
+        if campaign_id_int > 0:
+            campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id_int).first()
+            if campaign:
+                inferred_amount = _to_decimal(getattr(campaign, "budget", 0))
+
+    if inferred_amount < 0:
+        inferred_amount = Decimal("0")
+    return inferred_amount, inferred_currency
+
+
+def hydrate_deal_payment_amount(db: Session, deal_obj: object) -> Decimal:
+    current_amount = _to_decimal(getattr(deal_obj, "payment_amount", 0))
+    if current_amount > 0:
+        return current_amount
+
+    inferred_amount, inferred_currency = _infer_deal_amount_and_currency(
+        db=db,
+        deal_type=getattr(deal_obj, "deal_type", None),
+        event_id=getattr(deal_obj, "event_id", None),
+        campaign_id=getattr(deal_obj, "campaign_id", None),
+    )
+    if inferred_amount > 0:
+        setattr(deal_obj, "payment_amount", inferred_amount)
+        existing_currency = getattr(deal_obj, "currency", None)
+        if not isinstance(existing_currency, str) or not existing_currency.strip():
+            setattr(deal_obj, "currency", inferred_currency)
+        db.add(deal_obj)
+        db.commit()
+        db.refresh(deal_obj)
+        return inferred_amount
+
+    return current_amount
+
+
 def create_deal(db: Session, deal: schemas.DealCreate):
     data = deal.dict()
+    current_amount = _to_decimal(data.get("payment_amount", 0))
+    if current_amount <= 0:
+        inferred_amount, inferred_currency = _infer_deal_amount_and_currency(
+            db=db,
+            deal_type=data.get("deal_type"),
+            event_id=data.get("event_id"),
+            campaign_id=data.get("campaign_id"),
+        )
+        if inferred_amount > 0:
+            data["payment_amount"] = inferred_amount
+            data["currency"] = inferred_currency
+
     # Auto-accept for the initiator
     if data.get("deal_type") == "promotion":
         if data.get("influencer_id") and not data.get("organizer_id"):

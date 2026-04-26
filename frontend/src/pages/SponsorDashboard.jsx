@@ -23,6 +23,7 @@ import {
   fetchDeal,
   createPaymentOrder,
   fetchPaymentCheckoutConfig,
+  verifyPayment,
   signDeal as signDealFn,
   createDeal,
   createReview,
@@ -197,14 +198,19 @@ const SponsorDashboard = () => {
   const [showAgreementModal, setShowAgreementModal] = useState(false);
 
   const handleStartPayment = (deal) => { 
-    // Always trust server-provided deal amount only.
-    const serverAmount = Number(deal.paymentAmount);
-    if (!Number.isFinite(serverAmount) || serverAmount <= 0) {
+    const resolvedAmount =
+      Number(deal.paymentAmount) ||
+      Number(deal.event?.raw_budget) ||
+      Number(deal.event?.budget) ||
+      Number(deal.campaign?.budget) ||
+      0;
+
+    if (!Number.isFinite(resolvedAmount) || resolvedAmount <= 0) {
       toast.error("Deal amount is not configured yet. Please refresh or contact support.");
       return;
     }
 
-    setPaymentDeal({ ...deal, paymentAmount: serverAmount }); 
+    setPaymentDeal({ ...deal, paymentAmount: resolvedAmount }); 
     setShowPaymentModal(true); 
   };
   const handlePaymentSuccess = async (_pay) => {
@@ -212,7 +218,7 @@ const SponsorDashboard = () => {
     setIsSubmitting(true);
     try {
       const [orderResp, configResp] = await Promise.all([
-        createPaymentOrder(paymentDeal.id),
+        createPaymentOrder(paymentDeal.id, { forceNew: true }),
         fetchPaymentCheckoutConfig(),
       ]);
 
@@ -222,8 +228,16 @@ const SponsorDashboard = () => {
       const amountPaise = Math.round(Number(orderData.payment_amount || paymentDeal.paymentAmount || 0) * 100);
       const currency = orderData.currency || paymentDeal.currency || "INR";
 
-      if (!orderId || !keyId || amountPaise <= 0) {
-        toast.error("Unable to start gateway checkout. Please verify payment configuration.");
+      if (!keyId) {
+        toast.error("Payment gateway key is missing. Set RAZORPAY_KEY_ID in backend environment.");
+        return;
+      }
+      if (!orderId) {
+        toast.error("Payment order was not created. Please try again.");
+        return;
+      }
+      if (amountPaise <= 0) {
+        toast.error("Invalid payment amount for this deal. Please refresh and retry.");
         return;
       }
 
@@ -242,9 +256,23 @@ const SponsorDashboard = () => {
         order_id: orderId,
         name: "Sponsorship Hub",
         description: `Deal #${orderData.id || paymentDeal.id} checkout`,
-        handler: async () => {
-          toast.success("Payment authorized. Waiting for secure webhook confirmation.");
-          await refreshDeals();
+        handler: async (gatewayPayload) => {
+          try {
+            await verifyPayment({
+              deal_id: paymentDeal.id,
+              razorpay_order_id: gatewayPayload?.razorpay_order_id || orderId,
+              razorpay_payment_id: gatewayPayload?.razorpay_payment_id,
+              razorpay_signature: gatewayPayload?.razorpay_signature,
+            });
+            toast.success("Payment verified and pipeline updated.");
+            await refreshDeals();
+          } catch (verifyError) {
+            const verifyMessage =
+              verifyError?.response?.data?.message ||
+              verifyError?.response?.data?.detail ||
+              "Payment authorized, but verification failed. Please refresh and retry.";
+            toast.error(verifyMessage);
+          }
         },
         modal: {
           ondismiss: () => {
@@ -258,15 +286,24 @@ const SponsorDashboard = () => {
         theme: { color: "#5b4bff" },
       });
 
-      rzp.on("payment.failed", () => {
-        toast.error("Payment failed. Please try again.");
+      rzp.on("payment.failed", (response) => {
+        const gatewayMessage =
+          response?.error?.description ||
+          response?.error?.reason ||
+          response?.error?.source ||
+          "Payment failed. Please try again.";
+        toast.error(gatewayMessage);
       });
       rzp.open();
 
       toast.success("Order created. Complete payment in the gateway popup.");
-    } catch (err) {
-      logSponsorError("failed to start payment checkout", err);
-      toast.error("Unable to start payment checkout");
+    } catch (error) {
+      const apiMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+        error?.message ||
+        "Unable to start payment checkout";
+      toast.error(apiMessage);
     } finally {
       setIsSubmitting(false);
     }

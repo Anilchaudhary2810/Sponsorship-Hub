@@ -4,6 +4,8 @@ Payment tests – covers /payments endpoints with Razorpay (Mocked).
 import pytest
 from unittest.mock import MagicMock
 from datetime import datetime
+import hashlib
+import hmac
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -253,3 +255,72 @@ def test_payment_captured_webhook_maps_deal_by_order_id(client, payment_deal, sp
     assert deal.payment_done is True
     assert deal.status == "signing_pending"
     assert deal.razorpay_payment_id == order_id
+
+
+def test_verify_payment_updates_deal_state(client, payment_deal, sponsor_pay_headers, monkeypatch, db):
+    from backend.config import settings
+
+    deal, _, _ = payment_deal
+    # Force mocked local order path for deterministic tests (no live Razorpay auth).
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_ID", None)
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", None)
+
+    create_response = client.post(
+        f"/payments/create-order?deal_id={deal.id}",
+        headers=sponsor_pay_headers
+    )
+    assert create_response.status_code == 200
+    order_id = create_response.json()["razorpay_payment_id"]
+
+    payment_id = "pay_test_001"
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", "test_secret_123")
+    signature = hmac.new(
+        b"test_secret_123",
+        f"{order_id}|{payment_id}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+    verify_response = client.post(
+        "/payments/verify",
+        headers=sponsor_pay_headers,
+        json={
+            "deal_id": deal.id,
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": signature,
+        },
+    )
+    assert verify_response.status_code == 200
+
+    db.refresh(deal)
+    assert deal.payment_done is True
+    assert deal.status == "signing_pending"
+
+
+def test_verify_payment_rejects_invalid_signature(client, payment_deal, sponsor_pay_headers, monkeypatch):
+    from backend.config import settings
+
+    deal, _, _ = payment_deal
+    # Force mocked local order path for deterministic tests (no live Razorpay auth).
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_ID", None)
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", None)
+
+    create_response = client.post(
+        f"/payments/create-order?deal_id={deal.id}",
+        headers=sponsor_pay_headers
+    )
+    assert create_response.status_code == 200
+    order_id = create_response.json()["razorpay_payment_id"]
+
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", "test_secret_123")
+    verify_response = client.post(
+        "/payments/verify",
+        headers=sponsor_pay_headers,
+        json={
+            "deal_id": deal.id,
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": "pay_test_001",
+            "razorpay_signature": "invalid",
+        },
+    )
+    assert verify_response.status_code == 400
