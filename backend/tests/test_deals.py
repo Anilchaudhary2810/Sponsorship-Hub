@@ -180,6 +180,130 @@ def test_create_deal_invalid_deal_type(client, deal_users, sponsor_headers):
     assert response.status_code == 422
 
 
+def test_create_deal_rejects_sponsorship_with_influencer(client, deal_users, sponsor_headers):
+    """Sponsorship deals must not carry influencer_id."""
+    sponsor, organizer, influencer = deal_users
+    response = client.post(
+        "/deals/",
+        json={
+            "sponsor_id": sponsor.id,
+            "organizer_id": organizer.id,
+            "influencer_id": influencer.id,
+            "deal_type": "sponsorship"
+        },
+        headers=sponsor_headers
+    )
+    assert response.status_code == 422
+
+
+def test_create_deal_rejects_promotion_with_organizer(client, deal_users, influencer_headers):
+    """Promotion deals must not carry organizer_id."""
+    sponsor, organizer, influencer = deal_users
+    response = client.post(
+        "/deals/",
+        json={
+            "sponsor_id": sponsor.id,
+            "organizer_id": organizer.id,
+            "influencer_id": influencer.id,
+            "deal_type": "promotion"
+        },
+        headers=influencer_headers
+    )
+    assert response.status_code == 422
+
+
+def test_create_deal_rejects_participant_role_mismatch(client, deal_users, organizer_headers):
+    """Participant ids must point to users of the expected role."""
+    _, organizer, influencer = deal_users
+    response = client.post(
+        "/deals/",
+        json={
+            "sponsor_id": influencer.id,  # invalid: influencer used as sponsor
+            "organizer_id": organizer.id,
+            "deal_type": "sponsorship"
+        },
+        headers=organizer_headers
+    )
+    assert response.status_code == 400
+    assert "sponsor_id" in response.json().get("message", "").lower()
+
+
+def test_create_deal_rejects_event_organizer_mismatch(client, db, deal_users, sponsor_headers):
+    """When event_id is provided, it must belong to organizer_id."""
+    from backend.models import User, Event
+
+    sponsor, organizer, _ = deal_users
+    other_organizer = User(
+        full_name="Other Organizer",
+        email="other_org_for_deals@example.com",
+        password=pwd_context.hash("Password123"),
+        role="organizer",
+        is_verified=True
+    )
+    db.add(other_organizer)
+    db.commit()
+    db.refresh(other_organizer)
+
+    event = Event(
+        title="Mismatched Event",
+        organizer_id=other_organizer.id
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+
+    response = client.post(
+        "/deals/",
+        json={
+            "sponsor_id": sponsor.id,
+            "organizer_id": organizer.id,
+            "event_id": event.id,
+            "deal_type": "sponsorship"
+        },
+        headers=sponsor_headers
+    )
+    assert response.status_code == 400
+    assert "event_id" in response.json().get("message", "").lower()
+
+
+def test_create_deal_rejects_campaign_sponsor_mismatch(client, db, deal_users, sponsor_headers):
+    """When campaign_id is provided, it must belong to sponsor_id."""
+    from backend.models import User, Campaign
+
+    sponsor, _, influencer = deal_users
+    other_sponsor = User(
+        full_name="Other Sponsor",
+        email="other_sponsor_for_deals@example.com",
+        password=pwd_context.hash("Password123"),
+        role="sponsor",
+        is_verified=True
+    )
+    db.add(other_sponsor)
+    db.commit()
+    db.refresh(other_sponsor)
+
+    campaign = Campaign(
+        title="Other Sponsor Campaign",
+        creator_id=other_sponsor.id
+    )
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+
+    response = client.post(
+        "/deals/",
+        json={
+            "sponsor_id": sponsor.id,
+            "influencer_id": influencer.id,
+            "campaign_id": campaign.id,
+            "deal_type": "promotion"
+        },
+        headers=sponsor_headers
+    )
+    assert response.status_code == 400
+    assert "campaign_id" in response.json().get("message", "").lower()
+
+
 # ---------------------------------------------------------------------------
 # List Deals
 # ---------------------------------------------------------------------------
@@ -277,13 +401,13 @@ def test_update_deal_unauthenticated(client, created_deal):
 # Delete Deal
 # ---------------------------------------------------------------------------
 
-def test_delete_deal_success(client, created_deal, sponsor_headers):
+def test_delete_deal_success(client, created_deal, organizer_headers):
     deal_id = created_deal["id"]
-    response = client.delete(f"/deals/{deal_id}", headers=sponsor_headers)
+    response = client.delete(f"/deals/{deal_id}", headers=organizer_headers)
     assert response.status_code == 200
 
     # Confirm it's gone
-    get_resp = client.get(f"/deals/{deal_id}", headers=sponsor_headers)
+    get_resp = client.get(f"/deals/{deal_id}", headers=organizer_headers)
     assert get_resp.status_code == 400
 
 
@@ -296,6 +420,48 @@ def test_delete_deal_not_participant(client, created_deal, influencer_headers):
     deal_id = created_deal["id"]
     response = client.delete(f"/deals/{deal_id}", headers=influencer_headers)
     assert response.status_code == 403
+
+
+def test_delete_deal_participant_but_not_initiator(client, created_deal, sponsor_headers):
+    """Participants other than initiator cannot delete proposed deals."""
+    deal_id = created_deal["id"]
+    response = client.delete(f"/deals/{deal_id}", headers=sponsor_headers)
+    assert response.status_code == 403
+
+
+def test_delete_deal_rejects_non_proposed_state(client, db, created_deal, organizer_headers):
+    """Deletion is only allowed while deal is still in proposed state."""
+    from backend.models import Deal
+
+    deal_id = created_deal["id"]
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    assert deal is not None
+    deal.status = "payment_pending"
+    db.commit()
+
+    response = client.delete(f"/deals/{deal_id}", headers=organizer_headers)
+    assert response.status_code == 400
+    assert "only proposed deals can be deleted" in response.json().get("message", "").lower()
+
+
+def test_admin_can_delete_proposed_deal(client, created_deal, admin_auth_headers):
+    deal_id = created_deal["id"]
+    response = client.delete(f"/deals/{deal_id}", headers=admin_auth_headers)
+    assert response.status_code == 200
+
+
+def test_admin_cannot_delete_non_proposed_deal(client, db, created_deal, admin_auth_headers):
+    from backend.models import Deal
+
+    deal_id = created_deal["id"]
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    assert deal is not None
+    deal.status = "signing_pending"
+    db.commit()
+
+    response = client.delete(f"/deals/{deal_id}", headers=admin_auth_headers)
+    assert response.status_code == 400
+    assert "only proposed deals can be deleted" in response.json().get("message", "").lower()
 
 
 def test_delete_deal_unauthenticated(client, created_deal):

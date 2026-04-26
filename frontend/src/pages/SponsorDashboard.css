@@ -150,24 +150,6 @@
   border: 1px solid color-mix(in oklab, var(--primary) 45%, var(--border) 55%);
 }
 
-.deal-pipeline-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-  gap: 24px;
-}
-
-.deal-pipeline-grid > .empty-state,
-.event-horizontal-grid > .empty-state,
-.creator-horizontal-grid > .empty-state {
-  grid-column: 1 / -1;
-}
-
-@media (min-width: 768px) {
-  .deal-pipeline-grid {
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  }
-}
-
 .deal-type-chip {
   display: inline-flex;
   align-items: center;
@@ -320,18 +302,6 @@
   filter: brightness(1.04);
 }
 
-.event-horizontal-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-  gap: 24px;
-}
-
-@media (min-width: 768px) {
-  .event-horizontal-grid {
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  }
-}
-
 .event-card-modern {
   background: color-mix(in oklab, var(--card) 90%, var(--primary) 10%);
   padding: 28px;
@@ -455,41 +425,6 @@
   .accept-pill-btn, .reject-pill-btn, .mini-action-btn { width: 100%; }
   .pipeline-main-actions { grid-template-columns: 1fr; }
   .doc-buttons-group { grid-template-columns: 1fr; }
-  
-  /* Consolidated Horizontal Scroll for all sections except Analytics */
-  .event-horizontal-grid, 
-  .creator-horizontal-grid,
-  .deal-pipeline-grid {
-    display: flex;
-    overflow-x: auto;
-    padding: 10px 4px 25px;
-    gap: 16px;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    margin-left: -5px;
-    margin-right: -5px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .event-horizontal-grid::-webkit-scrollbar, 
-  .creator-horizontal-grid::-webkit-scrollbar,
-  .deal-pipeline-grid::-webkit-scrollbar {
-    display: none;
-  }
-
-  .event-card-modern, 
-  .creator-card-modern,
-  .deal-pipeline-grid > * {
-    min-width: 280px;
-    scroll-snap-align: center;
-    flex: 0 0 auto;
-  }
-
-  .event-horizontal-grid > .empty-state,
-  .creator-horizontal-grid > .empty-state,
-  .deal-pipeline-grid > .empty-state {
-    min-width: 100%;
-  }
 }
 
 .delete-confirm-btn.proposal-btn {
@@ -662,19 +597,6 @@
   background: var(--input);
   border-color: var(--primary);
   transform: translateY(-2px);
-}
-
-.creator-horizontal-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-  gap: 24px;
-  margin-top: 10px;
-}
-
-@media (min-width: 768px) {
-  .creator-horizontal-grid {
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  }
 }
 
 .creator-card-modern {
@@ -1204,43 +1126,6 @@
 .mini-action-btn.legal-outline:disabled {
   opacity: 0.72;
   border-style: solid !important;
-}
-
-/* Keep Sponsor pipeline stable even if other dashboard styles are loaded later */
-.sponsor-container .deal-pipeline-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-  gap: 24px;
-}
-
-@media (min-width: 768px) {
-  .sponsor-container .deal-pipeline-grid {
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  }
-}
-
-@media (max-width: 480px) {
-  .sponsor-container .deal-pipeline-grid {
-    display: flex;
-    overflow-x: auto;
-    padding: 10px 4px 25px;
-    gap: 16px;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    margin-left: -5px;
-    margin-right: -5px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .sponsor-container .deal-pipeline-grid > * {
-    min-width: 280px;
-    scroll-snap-align: center;
-    flex: 0 0 auto;
-  }
-
-  .sponsor-container .deal-pipeline-grid > .empty-state {
-    min-width: 100%;
-  }
 }
 
 :root[data-theme='light'] .deal-flow-card {

@@ -43,14 +43,38 @@ const api = axios.create({
 
 let refreshPromise = null;
 
+const PUBLIC_AUTH_PATHS = new Set([
+  "/login",
+  "/register",
+  "/verify-email",
+  "/forgot-password",
+  "/reset-password",
+]);
+
+const isOnPublicAuthPage = () => {
+  if (typeof window === "undefined") return false;
+  const path = window.location.pathname || "";
+  return PUBLIC_AUTH_PATHS.has(path);
+};
+
 const shouldSkipRefresh = (url = "") =>
   url.includes("/auth/login") ||
   url.includes("/auth/register") ||
+  url.includes("/auth/verify-email") ||
+  url.includes("/auth/resend-verification") ||
+  url.includes("/auth/request-password-reset") ||
+  url.includes("/auth/reset-password") ||
   url.includes("/auth/refresh") ||
   url.includes("/auth/logout");
 
 const handleAuthFailure = (message) => {
   localStorage.removeItem("currentUser");
+
+  // Do not interrupt public auth flows (login/register/verify/reset) with
+  // "Session expired" UX noise.
+  if (isOnPublicAuthPage()) {
+    return;
+  }
 
   if (message) {
     toast.error(`Session expired: ${message}`);
@@ -88,9 +112,11 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config || {};
     const isUnauthorized = error.response?.status === 401;
+    const requestUrl = originalRequest.url || "";
+    const skipRefresh = shouldSkipRefresh(requestUrl);
 
-    if (!isUnauthorized || originalRequest._retry || shouldSkipRefresh(originalRequest.url || "")) {
-      if (isUnauthorized) {
+    if (!isUnauthorized || originalRequest._retry || skipRefresh) {
+      if (isUnauthorized && !skipRefresh) {
         const errorMessage = error.response?.data?.message || error.response?.data?.detail;
         handleAuthFailure(errorMessage);
       }

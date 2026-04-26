@@ -39,6 +39,18 @@ def _to_str(value: object, default: str = "") -> str:
     return default
 
 
+def _ensure_user_role(db: Session, user_id: int, expected_role: str, field_name: str) -> None:
+    user = crud.get_user(db, user_id)
+    if not user:
+        raise exceptions.ValidationError(f"{field_name} references a user that does not exist")
+
+    actual_role = _to_str(getattr(user, "role", "")).lower()
+    if actual_role != expected_role:
+        raise exceptions.ValidationError(
+            f"{field_name} must reference a user with role '{expected_role}'"
+        )
+
+
 def _participant_ids_from_deal(deal_obj: object) -> list[int]:
     participants: list[int] = []
     for raw in (
@@ -50,6 +62,34 @@ def _participant_ids_from_deal(deal_obj: object) -> list[int]:
         if parsed is not None:
             participants.append(parsed)
     return participants
+
+
+def _initiator_user_id_from_deal(deal_obj: object) -> int | None:
+    deal_type = _to_str(getattr(deal_obj, "deal_type", "")).lower()
+
+    sponsor_id = _to_optional_int(getattr(deal_obj, "sponsor_id", None))
+    organizer_id = _to_optional_int(getattr(deal_obj, "organizer_id", None))
+    influencer_id = _to_optional_int(getattr(deal_obj, "influencer_id", None))
+
+    sponsor_accepted = bool(getattr(deal_obj, "sponsor_accepted", False))
+    organizer_accepted = bool(getattr(deal_obj, "organizer_accepted", False))
+    influencer_accepted = bool(getattr(deal_obj, "influencer_accepted", False))
+
+    if deal_type == "sponsorship":
+        if sponsor_accepted and not organizer_accepted:
+            return sponsor_id
+        if organizer_accepted and not sponsor_accepted:
+            return organizer_id
+        return None
+
+    if deal_type == "promotion":
+        if sponsor_accepted and not influencer_accepted:
+            return sponsor_id
+        if influencer_accepted and not sponsor_accepted:
+            return influencer_id
+        return None
+
+    return None
 
 
 async def _notify_participants(
@@ -106,6 +146,31 @@ async def create_deal(
     # Verify current user is part of the deal they are creating
     if current_user_id not in participant_ids:
         raise exceptions.AuthorizationError("You must be a participant in the deal you create")
+
+    if sponsor_id is not None:
+        _ensure_user_role(db, sponsor_id, "sponsor", "sponsor_id")
+    if organizer_id is not None:
+        _ensure_user_role(db, organizer_id, "organizer", "organizer_id")
+    if influencer_id is not None:
+        _ensure_user_role(db, influencer_id, "influencer", "influencer_id")
+
+    if deal.deal_type == "sponsorship" and deal.event_id is not None:
+        event = crud.get_event(db, deal.event_id)
+        if not event:
+            raise exceptions.ValidationError("event_id references an event that does not exist")
+
+        event_organizer_id = _to_optional_int(getattr(event, "organizer_id", None))
+        if organizer_id is not None and event_organizer_id != organizer_id:
+            raise exceptions.ValidationError("event_id must belong to organizer_id")
+
+    if deal.deal_type == "promotion" and deal.campaign_id is not None:
+        campaign = crud.get_campaign(db, deal.campaign_id)
+        if not campaign:
+            raise exceptions.ValidationError("campaign_id references a campaign that does not exist")
+
+        campaign_creator_id = _to_optional_int(getattr(campaign, "creator_id", None))
+        if sponsor_id is not None and campaign_creator_id != sponsor_id:
+            raise exceptions.ValidationError("campaign_id must belong to sponsor_id")
     
     result = crud.create_deal(db, deal)
     created_deal_id = _to_int(getattr(result, "id", 0))
@@ -215,11 +280,15 @@ async def delete_deal(
 
     current_user_id = _to_int(getattr(current_user, "id", 0))
     current_user_role = _to_str(getattr(current_user, "role", ""))
-    participant_ids = set(_participant_ids_from_deal(db_deal))
+    deal_status = _to_str(getattr(db_deal, "status", ""))
+    if deal_status != "proposed":
+        raise exceptions.BusinessLogicError("Only proposed deals can be deleted")
 
-    # Only initiator or admin should delete proposed deals
-    if current_user_id not in participant_ids and current_user_role != "admin":
-        raise exceptions.AuthorizationError()
+    # Only the initiator (auto-accepted proposer) or admin can delete.
+    if current_user_role != "admin":
+        initiator_user_id = _initiator_user_id_from_deal(db_deal)
+        if initiator_user_id is None or current_user_id != initiator_user_id:
+            raise exceptions.AuthorizationError("Only the deal initiator can delete this proposed deal")
          
     result = crud.delete_deal(db, deal_id)
     _audit(db, request, "deal.deleted", current_user_id, deal_id)
@@ -278,11 +347,10 @@ async def accept_deal(
 async def mark_payment_done(
     request: Request,
     deal_id: int, 
-    payment: schemas.DealPayment, 
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    del request, deal_id, payment, db, current_user
+    del request, deal_id, db, current_user
     raise HTTPException(
         status_code=status.HTTP_410_GONE,
         detail="Manual payment updates are disabled. Use /payments/create-order and provider webhook confirmation."

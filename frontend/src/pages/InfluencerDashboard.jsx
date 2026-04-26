@@ -25,6 +25,10 @@ import ReviewModal from "../components/ReviewModal";
 import DocumentViewer from "../components/DocumentViewer";
 import ActivityProgressModal from "../components/ActivityProgressModal";
 
+const logInfluencerError = (scope, err) => {
+  console.error(`[InfluencerDashboard] ${scope}`, err);
+};
+
 const InfluencerDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -64,8 +68,12 @@ const InfluencerDashboard = () => {
           map[Number(dealId)] = rating;
         });
         setReviewedDeals(prev => ({ ...prev, ...map }));
-      } catch {}
-    } catch {}
+      } catch (err) {
+        logInfluencerError("failed to load review history", err);
+      }
+    } catch (err) {
+      logInfluencerError("failed to load dashboard data", err);
+    }
   };
 
   const refreshDeals = async () => {
@@ -100,7 +108,9 @@ const InfluencerDashboard = () => {
       });
       toast.success("Proposal Sent to Sponsor!");
       refreshDeals();
-    } catch {
+    } catch (err) {
+      logInfluencerError("failed to apply for campaign", err);
+      toast.error("Unable to send proposal.");
     } finally { setIsSubmitting(false); }
   };
 
@@ -122,7 +132,9 @@ const InfluencerDashboard = () => {
       await actionFn(dealId, payload);
       await refreshDeals();
       toast.success("Pipeline Updated");
-    } catch {
+    } catch (err) {
+      logInfluencerError("failed to update deal action", err);
+      toast.error("Unable to update deal right now.");
     } finally { setIsSubmitting(false); }
   };
 
@@ -147,7 +159,10 @@ const InfluencerDashboard = () => {
       setReviewDeal(null);
       toast.success("Review submitted! Thank you.");
       loadData();
-    } catch {}
+    } catch (err) {
+      logInfluencerError("failed to submit review", err);
+      toast.error("Unable to submit review.");
+    }
   };
 
   const getDealPartnerName = (deal) => deal.sponsorName || "Sponsor";
@@ -202,7 +217,8 @@ const InfluencerDashboard = () => {
         const fresh = mapDealData(resp.data, currentUser);
         setSelectedPipelineDeal(fresh);
       })
-      .catch(() => {
+      .catch((err) => {
+        logInfluencerError(`failed to refresh deal #${dealId} details`, err);
         setSelectedPipelineDeal(deal);
       });
   };
@@ -259,7 +275,7 @@ const InfluencerDashboard = () => {
               <span className="badge">{visiblePipelineDeals.length} Connections</span>
             </div>
             <div className="horizontal-scroll-container">
-              <div className="deal-pipeline-grid">
+              <div className="deal-pipeline-grid h-scroll-grid">
                 {latestPipelineDeals.map(deal => (
                   <DealCard key={deal.id} deal={deal}>
                     <div className="deal-card-content-wide">
@@ -394,7 +410,7 @@ const InfluencerDashboard = () => {
                 </div>
               )}
             </div>
-            <div className="campaign-horizontal-grid">
+            <div className="campaign-horizontal-grid h-scroll-grid">
               {latestCampaigns.map(camp => {
                 const isApplied = deals.some(d => Number(d.campaign_id) === Number(camp.id));
                 return (

@@ -31,7 +31,7 @@ const Login = () => {
       if (role === "sponsor") navigate("/sponsor-dashboard");
       else if (role === "organizer") navigate("/organizer-dashboard");
       else if (role === "influencer") navigate("/influencer-dashboard");
-      else if (role === "admin") navigate("/scale-ops?tab=admin");
+      else if (role === "admin") navigate("/admin");
       // If valid role not found, we just stay at login
     }
   }, [navigate]);
@@ -73,7 +73,7 @@ const Login = () => {
       if (role === "sponsor") navigate("/sponsor-dashboard");
       else if (role === "organizer") navigate("/organizer-dashboard");
       else if (role === "influencer") navigate("/influencer-dashboard");
-      else if (role === "admin") navigate("/scale-ops?tab=admin");
+      else if (role === "admin") navigate("/admin");
       else navigate("/login");
     } catch (err) {
       console.warn("Login request failed", {
@@ -84,6 +84,14 @@ const Login = () => {
       if (err.response) {
         // The server responded with a status code outside the 2xx range
         const message = err.response.data?.detail || err.response.data?.message || "Invalid credentials or account issue";
+        const normalizedMessage = String(message).toLowerCase();
+
+        if (normalizedMessage.includes("verify your email")) {
+          toast.error(message);
+          navigate(`/verify-email?email=${encodeURIComponent(formData.email.trim())}`);
+          return;
+        }
+
         toast.error(message);
       } else if (err.request) {
         // The request was made but no response was received

@@ -1,71 +1,110 @@
-# Sponsorship Management Backend
+# Sponsorship Hub Backend
 
-This directory contains a FastAPI application providing a CRUD API over a PostgreSQL (or other SQL) database.
+This backend is a FastAPI application for auth, user management, marketplace flows, deal lifecycle, trust/KYC, billing/ops, reporting, and realtime features.
 
-## Setup
+## Run Locally
 
-1. Create a virtual environment and install requirements:
-   ```bash
-   cd backend
-   python -m venv .venv
-   .\.venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
+From repository root:
 
-2. Configure environment variables (see `.env.example` if provided). At minimum:
-   ```env
-   DATABASE_URL=postgresql://user:pass@localhost/dbname
-   ```
-   If `DATABASE_URL` is not set, the code will fall back to `sqlite:///./development.db`.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r backend/requirements.txt
+python -m uvicorn backend.main:app --reload
+```
 
-3. Run database migrations or allow `models.Base.metadata.create_all()` to create tables (development only).
+Available at:
+- API: `http://localhost:8000`
+- Swagger: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
 
-4. Start the server:
-   ```bash
-   uvicorn backend.main:app --reload
-   ```
+## Core Router Prefixes
 
-## API Endpoints
+- `/auth`
+- `/users`
+- `/events`
+- `/campaigns`
+- `/deals`
+- `/payments`
+- `/chat`
+- `/notifications` and `/ws/notifications/{user_id}`
+- `/reviews`
+- `/stats`
+- `/ops`
+- `/billing`
+- `/trust`
+- `/proposal`
+- `/revenue`
+- `/collaboration`
+- `/retention`
+- `/reports`
+- `/integrations`
+- `/ai-assistant`
 
-### Authentication / Users
-- `POST /auth/register` (create user)
-- `POST /auth/login` (verify credentials)
-- `GET /users/{id}`
-- `PUT /users/{id}`
+Use `/docs` for the full request/response schemas and up-to-date endpoint list.
 
-### Events
-- `POST /events`
-- `GET /events`
-- `GET /events/{id}`
-- `PUT /events/{id}`
-- `DELETE /events/{id}`
+## Payments (Current)
 
-### Deals
-- `POST /deals`
-- `GET /deals`
-- `GET /deals/{id}`
-- `PUT /deals/{id}`
-- `DELETE /deals/{id}`
-- `PUT /deals/{id}/accept`
-- `PUT /deals/{id}/sign`
-- `POST /payments/create-intent`
+The backend uses Razorpay-style order flow (not Stripe PaymentIntent flow):
 
-### Reviews
-- `POST /reviews`
-- `GET /reviews/{deal_id}`
+- `GET /payments/checkout-config`
+- `POST /payments/create-order?deal_id=<id>`
+- `POST /payments/webhook`
+
+Notes:
+- Order creation validates ownership and deal state.
+- Final payment settlement is webhook-driven.
+- In non-production, local mock order fallback is allowed when gateway keys are not configured.
+
+## Environment Variables
+
+Configured in `backend/config.py`. Common keys:
+
+```env
+APP_NAME="Sponsorship Management"
+DEBUG=false
+ENV="development"
+
+SECRET_KEY="replace_with_a_strong_secret"
+ALGORITHM="HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+DATABASE_URL="sqlite:///./sponsorship.db"
+
+RAZORPAY_KEY_ID=""
+RAZORPAY_KEY_SECRET=""
+RAZORPAY_WEBHOOK_SECRET=""
+
+SMTP_HOST="localhost"
+SMTP_PORT=1025
+SMTP_USER=""
+SMTP_PASS=""
+SMTP_FROM="noreply@sponsorship.com"
+SMTP_USE_TLS=false
+SMTP_TIMEOUT_SECONDS=10
+
+FRONTEND_BASE_URL="http://localhost:5173"
+EMAIL_VERIFICATION_EXPIRE_HOURS=24
+
+AI_API_KEY=""
+AI_MODEL="gpt-4o-mini"
+AI_API_BASE_URL="https://api.openai.com/v1"
+AI_TIMEOUT_SECONDS=25
+
+CORS_ORIGINS='["http://localhost:5173","http://127.0.0.1:5173","http://localhost:5174","http://127.0.0.1:5174"]'
+```
 
 ## Testing
 
-A comprehensive automated test suite is provided in `backend/tests/`.
+From repository root:
 
-### Run tests:
-```bash
-pytest --cov=backend --cov-report=term-missing
+```powershell
+pytest backend/tests -q
 ```
 
-## Security Implementation
-- **State Machine**: Deals follow a strict proposed -> accepted -> payment -> sign sequence.
-- **Role Control**: CRUD operations are protected by role-based ownership checks.
-- **Stripe Integration**: Production-ready PaymentIntent and signature-verified webhooks.
-- **Auth**: Dual-token JWT (Access/Refresh) with 1-hour password reset expiration.
+For coverage:
 
+```powershell
+pytest --cov=backend --cov-report=term-missing
+```

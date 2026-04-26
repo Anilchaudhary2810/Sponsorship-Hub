@@ -25,22 +25,28 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: hsla(var(--color-primary), 0.1);
-  border: 1px solid hsla(var(--color-primary), 0.3);
+  background: color-mix(in oklab, var(--primary) 12%, var(--card) 88%);
+  border: 1px solid color-mix(in oklab, var(--primary) 36%, var(--border) 64%);
   color: var(--primary-strong);
   border-radius: 12px;
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 18%, transparent 82%);
 }
 
 .analytics-nav-btn:hover {
-  background: var(--primary-gradient);
+  background: var(--primary-strong);
   color: white;
   border-color: transparent;
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px hsla(var(--color-primary), 0.4);
+  box-shadow: 0 4px 15px hsla(var(--color-primary), 0.3);
+}
+
+.analytics-nav-btn:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--primary) 60%, white 40%);
+  outline-offset: 2px;
 }
 
 .subtitle {
@@ -184,22 +190,24 @@
   border: 1px solid var(--primary);
 }
 
-/* ===== DEAL PIPELINE GRID ===== */
-.deal-pipeline-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-  gap: 24px;
+.deal-flow-card {
+  background: linear-gradient(
+    165deg,
+    color-mix(in oklab, var(--card) 88%, var(--primary) 12%) 0%,
+    color-mix(in oklab, var(--card) 95%, var(--background) 5%) 100%
+  );
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
 }
 
-.deal-pipeline-grid > .empty-state,
-.campaign-horizontal-grid > .empty-state {
-  grid-column: 1 / -1;
-}
-
-@media (min-width: 768px) {
-  .deal-pipeline-grid {
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  }
+.deal-flow-card:hover {
+  border-color: color-mix(in oklab, var(--primary) 52%, var(--border) 48%);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(var(--shadow-color), 0.16);
 }
 
 /* ===== DEAL CARD CONTENT ===== */
@@ -479,19 +487,6 @@
   text-transform: uppercase;
 }
 
-/* ===== CAMPAIGN MARKETPLACE ===== */
-.campaign-horizontal-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-  gap: 24px;
-}
-
-@media (min-width: 768px) {
-  .campaign-horizontal-grid {
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  }
-}
-
 .campaign-card-modern {
   background: var(--input);
   padding: 28px;
@@ -619,34 +614,4 @@
   .influencer-title { font-size: 28px; }
   .dashboard-section-wide { padding: 20px; }
   
-  /* Consolidated Horizontal Scroll for all sections except Analytics */
-  .campaign-horizontal-grid,
-  .deal-pipeline-grid {
-    display: flex;
-    overflow-x: auto;
-    padding: 10px 4px 25px;
-    gap: 16px;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    margin-left: -5px;
-    margin-right: -5px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .campaign-horizontal-grid::-webkit-scrollbar,
-  .deal-pipeline-grid::-webkit-scrollbar {
-    display: none;
-  }
-
-  .campaign-card-modern,
-  .deal-pipeline-grid > * {
-    min-width: 300px;
-    scroll-snap-align: center;
-    flex: 0 0 auto;
-  }
-
-  .campaign-horizontal-grid > .empty-state,
-  .deal-pipeline-grid > .empty-state {
-    min-width: 100%;
-  }
 }

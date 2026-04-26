@@ -47,6 +47,7 @@ import {
   reviewKycSubmission,
 } from "../services/api";
 import { formatCurrency } from "../utils/formatCurrency";
+import { ACTIVE_ADMIN_MODULES, COMING_SOON_ADMIN_MODULES } from "../modules/admin/adminPanelModules";
 import "./ScaleOpsPage.css";
 
 const BASE_TABS = [
@@ -65,12 +66,17 @@ const ScaleOpsPage = () => {
   const location = useLocation();
   const currentUser = useMemo(() => JSON.parse(localStorage.getItem("currentUser") || "{}"), []);
   const isAdmin = String(currentUser.role || "").toLowerCase() === "admin";
+  const isAdminRoute = location.pathname === "/admin";
+  const isDedicatedAdminView = isAdmin && isAdminRoute;
   const tabs = useMemo(
-    () => (isAdmin ? [...BASE_TABS, { id: "admin", label: "Admin Ops" }] : BASE_TABS),
-    [isAdmin]
+    () => {
+      if (isDedicatedAdminView) return [{ id: "admin", label: "Admin Ops" }];
+      return isAdmin ? [...BASE_TABS, { id: "admin", label: "Admin Ops" }] : BASE_TABS;
+    },
+    [isAdmin, isDedicatedAdminView]
   );
   const allowedTabIds = useMemo(() => tabs.map((tab) => tab.id), [tabs]);
-  const [activeTab, setActiveTab] = useState("proposal");
+  const [activeTab, setActiveTab] = useState(() => (isAdminRoute ? "admin" : "proposal"));
   const [loading, setLoading] = useState(false);
 
   const [deals, setDeals] = useState([]);
@@ -106,6 +112,7 @@ const ScaleOpsPage = () => {
   const [pendingKyc, setPendingKyc] = useState([]);
   const [adminLoading, setAdminLoading] = useState(false);
   const [kycReviewDrafts, setKycReviewDrafts] = useState({});
+  const [showComingSoon, setShowComingSoon] = useState(false);
 
   const [templateForm, setTemplateForm] = useState({ name: "", description: "", deal_type: "sponsorship" });
   const [approvalForm, setApprovalForm] = useState({ approver_role: "manager", approver_user_id: "" });
@@ -126,6 +133,37 @@ const ScaleOpsPage = () => {
   const selectedWorkspace = useMemo(
     () => workspaces.find((w) => Number(w.id) === Number(selectedWorkspaceId)) || null,
     [workspaces, selectedWorkspaceId]
+  );
+
+  const adminRequestInsights = useMemo(() => {
+    const totalRequests = Number(opsMetrics?.total_requests || 0);
+    const avgLatencyMs = Number(opsMetrics?.avg_process_time_ms || 0);
+    const statusCounts = opsMetrics?.status_counts || {};
+    const successRequests = Object.entries(statusCounts).reduce(
+      (sum, [code, count]) => (String(code).startsWith("2") ? sum + Number(count || 0) : sum),
+      0
+    );
+    const successRatePct = totalRequests > 0 ? ((successRequests / totalRequests) * 100).toFixed(1) : "0.0";
+    const topPaths = Object.entries(opsMetrics?.path_counts || {})
+      .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
+      .slice(0, 5);
+
+    return { totalRequests, avgLatencyMs, successRatePct, topPaths };
+  }, [opsMetrics]);
+
+  const adminSummaryCards = useMemo(
+    () => [
+      { label: "Pending KYC", value: pendingKyc.length },
+      { label: "Audit Events", value: auditEvents.length },
+      { label: "Total Users", value: planDistribution?.total_users ?? "-" },
+      { label: "Paid Users", value: planDistribution?.paid_users ?? "-" },
+      {
+        label: "Estimated MRR",
+        value: planDistribution ? formatCurrency(Number(planDistribution.estimated_mrr_inr || 0), "INR") : "-",
+      },
+      { label: "Requests", value: adminRequestInsights.totalRequests },
+    ],
+    [pendingKyc.length, auditEvents.length, planDistribution, adminRequestInsights.totalRequests]
   );
 
   const loadBaseData = async () => {
@@ -257,11 +295,25 @@ const ScaleOpsPage = () => {
 
   useEffect(() => {
     const requestedTab = String(new URLSearchParams(location.search).get("tab") || "").toLowerCase();
+
+    if (isAdminRoute) {
+      if (isAdmin && activeTab !== "admin") {
+        setActiveTab("admin");
+      }
+      return;
+    }
+
     if (!requestedTab) return;
-    if (allowedTabIds.includes(requestedTab)) {
+
+    if (requestedTab === "admin" && !isAdmin) {
+      navigate("/scale-ops", { replace: true });
+      return;
+    }
+
+    if (allowedTabIds.includes(requestedTab) && activeTab !== requestedTab) {
       setActiveTab(requestedTab);
     }
-  }, [location.search, allowedTabIds]);
+  }, [location.search, allowedTabIds, isAdminRoute, isAdmin, navigate, activeTab]);
 
   useEffect(() => {
     if (selectedDealId) {
@@ -286,13 +338,6 @@ const ScaleOpsPage = () => {
       loadAdminData(auditActionFilter);
     }
   }, [activeTab, selectedProvider, isAdmin]);
-
-  useEffect(() => {
-    if (activeTab === "admin" && !isAdmin) {
-      setActiveTab("proposal");
-      toast.error("Admin access required");
-    }
-  }, [activeTab, isAdmin]);
 
   const handleCreateTemplate = async (e) => {
     e.preventDefault();
@@ -555,14 +600,27 @@ const ScaleOpsPage = () => {
     }
   };
 
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    if (tabId === "admin") {
+      navigate("/admin");
+      return;
+    }
+    navigate(`/scale-ops?tab=${encodeURIComponent(tabId)}`);
+  };
+
   return (
     <div>
       <Navbar role={currentUser.role || "sponsor"} />
       <main className="scale-ops-page">
         <header className="scale-ops-header">
           <div>
-            <h1>Scale Operations Hub</h1>
-            <p>Feature set 4-10 in one command center for proposal quality, revenue confidence, and growth operations.</p>
+            <h1>{isDedicatedAdminView ? "Admin Operations Hub" : "Scale Operations Hub"}</h1>
+            <p>
+              {isDedicatedAdminView
+                ? "Accessible control center with verified operational workflows and clear governance actions."
+                : "Feature set 4-10 in one command center for proposal quality, revenue confidence, and growth operations."}
+            </p>
           </div>
           <div className="scale-ops-header-actions">
             <button type="button" className="ghost-btn" onClick={() => navigate(-1)}>Back</button>
@@ -572,36 +630,40 @@ const ScaleOpsPage = () => {
           </div>
         </header>
 
-        <div className="scale-ops-tab-row">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={activeTab === tab.id ? "active" : ""}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <section className="scale-ops-card">
-          <label className="field-label">Selected Deal</label>
-          <select value={selectedDealId} onChange={(e) => setSelectedDealId(e.target.value)}>
-            <option value="">Select a deal</option>
-            {deals.map((deal) => (
-              <option key={deal.id} value={deal.id}>
-                #{deal.id} - {deal.deal_type} - {deal.status}
-              </option>
+        {tabs.length > 1 && (
+          <div className="scale-ops-tab-row">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={activeTab === tab.id ? "active" : ""}
+                onClick={() => handleTabChange(tab.id)}
+              >
+                {tab.label}
+              </button>
             ))}
-          </select>
-          {selectedDeal && (
-            <p className="muted-line">
-              Participants: Sponsor {selectedDeal.sponsor_id || "-"}, Organizer {selectedDeal.organizer_id || "-"},
-              Influencer {selectedDeal.influencer_id || "-"}
-            </p>
-          )}
-        </section>
+          </div>
+        )}
+
+        {activeTab !== "admin" && (
+          <section className="scale-ops-card">
+            <label className="field-label">Selected Deal</label>
+            <select value={selectedDealId} onChange={(e) => setSelectedDealId(e.target.value)}>
+              <option value="">Select a deal</option>
+              {deals.map((deal) => (
+                <option key={deal.id} value={deal.id}>
+                  #{deal.id} - {deal.deal_type} - {deal.status}
+                </option>
+              ))}
+            </select>
+            {selectedDeal && (
+              <p className="muted-line">
+                Participants: Sponsor {selectedDeal.sponsor_id || "-"}, Organizer {selectedDeal.organizer_id || "-"},
+                Influencer {selectedDeal.influencer_id || "-"}
+              </p>
+            )}
+          </section>
+        )}
 
         {activeTab === "proposal" && (
           <section className="scale-ops-grid two">
@@ -1024,16 +1086,59 @@ const ScaleOpsPage = () => {
         )}
 
         {activeTab === "admin" && isAdmin && (
-          <section className="scale-ops-grid two">
-            <article className="scale-ops-card">
+          <section className="scale-ops-grid two admin-ops-layout">
+            <article className="scale-ops-card full admin-hero-card">
               <div className="heading-row">
-                <h3>Platform Metrics</h3>
+                <div>
+                  <h3>Admin Operations Center</h3>
+                  <p className="muted-line">
+                    Focused view with only live operational tools. Experimental modules are moved to Coming Soon.
+                  </p>
+                </div>
                 <button type="button" onClick={handleRefreshAdmin} disabled={adminLoading}>
                   {adminLoading ? "Refreshing..." : "Refresh"}
                 </button>
               </div>
+
+              <div className="admin-module-chip-row">
+                {ACTIVE_ADMIN_MODULES.map((module) => (
+                  <span key={module.id} className="admin-module-chip" title={module.description}>
+                    {module.title}
+                  </span>
+                ))}
+              </div>
+
+              <div className="admin-summary-grid">
+                {adminSummaryCards.map((card) => (
+                  <div key={card.label} className="admin-summary-card">
+                    <small>{card.label}</small>
+                    <strong>{card.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="scale-ops-card">
+              <h3>Request Health</h3>
               {opsMetrics ? (
-                <pre className="json-block">{JSON.stringify(opsMetrics, null, 2)}</pre>
+                <>
+                  <div className="metric-grid">
+                    <div><small>Total Requests</small><strong>{adminRequestInsights.totalRequests}</strong></div>
+                    <div><small>Success Rate</small><strong>{adminRequestInsights.successRatePct}%</strong></div>
+                    <div><small>Avg Latency</small><strong>{adminRequestInsights.avgLatencyMs} ms</strong></div>
+                    <div><small>Status Families</small><strong>{Object.keys(opsMetrics.status_counts || {}).length}</strong></div>
+                  </div>
+                  <h4>Top Paths</h4>
+                  <div className="list-block compact">
+                    {adminRequestInsights.topPaths.map(([path, count]) => (
+                      <div key={path} className="line-item">
+                        <strong>{path}</strong>
+                        <span>{count}</span>
+                      </div>
+                    ))}
+                    {adminRequestInsights.topPaths.length === 0 && <p className="muted-line">No request path data yet.</p>}
+                  </div>
+                </>
               ) : (
                 <p className="muted-line">No metrics payload available.</p>
               )}
@@ -1049,7 +1154,7 @@ const ScaleOpsPage = () => {
                     <div><small>Estimated MRR</small><strong>{formatCurrency(Number(planDistribution.estimated_mrr_inr || 0), "INR")}</strong></div>
                     <div><small>Free Users</small><strong>{planDistribution.distribution?.free ?? 0}</strong></div>
                   </div>
-                  <div className="list-block">
+                  <div className="list-block compact">
                     {Object.entries(planDistribution.distribution || {}).map(([tier, count]) => (
                       <div key={tier} className="line-item">
                         <strong>{tier}</strong>
@@ -1165,6 +1270,28 @@ const ScaleOpsPage = () => {
                 })}
                 {pendingKyc.length === 0 && <p className="muted-line">No pending KYC submissions.</p>}
               </div>
+            </article>
+
+            <article className="scale-ops-card full coming-soon-card">
+              <div className="heading-row">
+                <h3>Coming Soon Modules</h3>
+                <button type="button" className="ghost-btn" onClick={() => setShowComingSoon((prev) => !prev)}>
+                  {showComingSoon ? "Hide Modules" : "Show Modules"}
+                </button>
+              </div>
+              <p className="muted-line">
+                Non-live modules are intentionally separated so the main admin view stays focused on real workflows.
+              </p>
+              {showComingSoon && (
+                <div className="coming-soon-grid">
+                  {COMING_SOON_ADMIN_MODULES.map((module) => (
+                    <div key={module.id} className="coming-soon-item">
+                      <strong>{module.title}</strong>
+                      <p>{module.description}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </article>
           </section>
         )}

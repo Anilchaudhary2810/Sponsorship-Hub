@@ -14,7 +14,6 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { mapEventData, mapDealData } from "../utils/mapping";
 import EventDetailModal from "../components/EventDetailModal";
 import QuickActionsBar from "../components/QuickActionsBar";
-import { INDIAN_STATES } from "../utils/constants";
 import "./SponsorDashboard.css";
 import ActivityProgressModal from "../components/ActivityProgressModal";
 import {
@@ -61,13 +60,15 @@ const loadRazorpaySdk = () =>
     document.body.appendChild(script);
   });
 
+const logSponsorError = (scope, err) => {
+  console.error(`[SponsorDashboard] ${scope}`, err);
+};
+
 const SponsorDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const dealIdFromQuery = Number(searchParams.get("dealId") || 0);
   const [activePipeline, setActivePipeline] = useState("events"); // 'events' or 'influencers'
-  const indianStates = INDIAN_STATES;
-  const [selectedState, setSelectedState] = useState("All States");
   
   const [events, setEvents] = useState([]);
   const [deals, setDeals] = useState([]);
@@ -106,11 +107,8 @@ const SponsorDashboard = () => {
 
   const loadData = async () => {
     try {
-      // Pass the selected state filter to the API for better efficiency
-      const eventParams = selectedState !== "All States" ? { state: selectedState } : {};
-      
       const [eventsResp, dealsResp, influencersResp, campaignsResp] = await Promise.all([
-        fetchEvents(eventParams), 
+        fetchEvents(), 
         fetchDeals(),
         getAvailableInfluencers(),
         fetchCampaigns(),
@@ -143,9 +141,13 @@ const SponsorDashboard = () => {
           map[Number(dealId)] = rating;
         });
         setReviewedDeals(prev => ({ ...prev, ...map }));
-      } catch {}
+      } catch (err) {
+        logSponsorError("failed to load review history", err);
+      }
 
-    } catch {}
+    } catch (err) {
+      logSponsorError("failed to load dashboard data", err);
+    }
   };
 
   useEffect(() => {
@@ -165,7 +167,7 @@ const SponsorDashboard = () => {
       clearTimeout(timer);
       window.removeEventListener('dashboard-refresh', handleGlobalRefresh);
     };
-  }, [currentUser.id, selectedState]); // Added selectedState as dependency
+  }, [currentUser.id]);
 
   const refreshDeals = async () => {
     const resp = await fetchDeals();
@@ -182,7 +184,9 @@ const SponsorDashboard = () => {
       await actionFn(dealId, payload);
       await refreshDeals();
       toast.success("Ecosystem Updated");
-    } catch {
+    } catch (err) {
+      logSponsorError("failed to update deal action", err);
+      toast.error("Unable to update deal right now.");
     } finally { setIsSubmitting(false); }
   };
 
@@ -260,7 +264,8 @@ const SponsorDashboard = () => {
       rzp.open();
 
       toast.success("Order created. Complete payment in the gateway popup.");
-    } catch {
+    } catch (err) {
+      logSponsorError("failed to start payment checkout", err);
       toast.error("Unable to start payment checkout");
     } finally {
       setIsSubmitting(false);
@@ -289,7 +294,10 @@ const SponsorDashboard = () => {
       setReviewDeal(null);
       toast.success("Review submitted! Thank you for your feedback.");
       loadData();
-    } catch {}
+    } catch (err) {
+      logSponsorError("failed to submit review", err);
+      toast.error("Unable to submit review.");
+    }
   };
 
   const [proposeDealEvent, setProposeDealEvent] = useState(null);
@@ -308,7 +316,9 @@ const SponsorDashboard = () => {
       await refreshDeals();
       toast.success("Partnership Proposal Sent!");
       setShowProposeDialog(false);
-    } catch {
+    } catch (err) {
+      logSponsorError("failed to send event proposal", err);
+      toast.error("Unable to send proposal.");
     } finally { 
       setIsSubmitting(false);
       setProposeDealEvent(null);
@@ -329,7 +339,9 @@ const SponsorDashboard = () => {
       setIsCreateCampaignOpen(false);
       setCampaignFormData({ title: "", description: "", budget: "", platform_required: "Instagram", deliverables: "" });
       loadData();
-    } catch {
+    } catch (err) {
+      logSponsorError("failed to create campaign", err);
+      toast.error("Unable to publish campaign.");
     } finally { setIsSubmitting(false); }
   };
 
@@ -349,7 +361,9 @@ const SponsorDashboard = () => {
       await refreshDeals();
       toast.success("Campaign Proposal Sent!");
       setShowInfluencerDialog(false);
-    } catch {
+    } catch (err) {
+      logSponsorError("failed to send influencer proposal", err);
+      toast.error("Unable to send campaign proposal.");
     } finally { setIsSubmitting(false); }
   };
 
@@ -465,7 +479,8 @@ const SponsorDashboard = () => {
         const fresh = mapDealData(resp.data, currentUser);
         setSelectedPipelineDeal(fresh);
       })
-      .catch(() => {
+      .catch((err) => {
+        logSponsorError(`failed to refresh deal #${dealId} details`, err);
         setSelectedPipelineDeal(deal);
       });
   };
@@ -495,7 +510,7 @@ const SponsorDashboard = () => {
   const quickActions = [
     {
       key: "new",
-      label: activePipeline === "influencers" ? "New Campaign" : "State Filter",
+      label: activePipeline === "influencers" ? "New Campaign" : "Filters",
       tone: "primary",
       onClick: () => {
         if (activePipeline === "influencers") setIsCreateCampaignOpen(true);
@@ -536,13 +551,6 @@ const SponsorDashboard = () => {
               <button className="create-primary-btn" onClick={() => setIsCreateCampaignOpen(true)}>
                 New Campaign
               </button>
-            )}
-            {activePipeline === 'events' && (
-              <div className="header-filters">
-                <select value={selectedState} onChange={(e) => setSelectedState(e.target.value)} className="horizontal-select">
-                  {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
             )}
           </div>
         </header>
@@ -607,7 +615,7 @@ const SponsorDashboard = () => {
               <span className="badge">{visiblePipelineDeals.length} Active Deals</span>
             </div>
             <div className="horizontal-scroll-container">
-              <div className="deal-pipeline-grid">
+              <div className="deal-pipeline-grid h-scroll-grid">
                 {latestPipelineDeals.map(deal => (
                   <DealCard key={deal.id} deal={deal}>
                     <div className="deal-card-content-wide">
@@ -786,7 +794,7 @@ const SponsorDashboard = () => {
             </div>
             
             {activePipeline === 'events' ? (
-              <div className="event-horizontal-grid">
+              <div className="event-horizontal-grid h-scroll-grid">
                 {latestEventMarketplace.map(event => {
                   const deal = deals.find(d => Number(d.event_id) === Number(event.id));
                   return (
@@ -823,7 +831,7 @@ const SponsorDashboard = () => {
                 )}
               </div>
             ) : (
-              <div className="creator-horizontal-grid">
+              <div className="creator-horizontal-grid h-scroll-grid">
                 {latestCreatorDiscovery.map(inf => {
                   const deal = deals.find(d => Number(d.influencer_id) === Number(inf.id));
                   return (

@@ -1,97 +1,109 @@
-# 🤝 Sponsorship Management System
-## 📌 What is this project?
-The **Sponsorship Management System** is a fullstack web application designed to connect **Event Organizers**, **Brands (Sponsors)**, and **Creators (Influencers)**. It streamlines the entire sponsorship lifecycle from discovery and proposals to contract signing and secure payments.
-### ✨ Key Features
-* **Role-Based Access Control (RBAC):** Dedicated, secure dashboards tailored for Sponsors, Organizers, and Influencers.
-* **Deal Lifecycle Management:** An intelligent state machine handling proposals, acceptances, signing, and closed deals.
-* **Real-time WebSockets:** Live chat between parties and instant in-app dashboard notifications without refreshing.
-* **Secure Authentication:** JWT-based authentication with password hashing.
-* **Modern Tech Stack:** 
-  - **Backend:** Data-validated Python API via FastAPI & SQLAlchemy.
-  - **Frontend:** Fast, responsive React SPA powered by Vite.
-  - **Database:** PostgreSQL (Production) / SQLite (Local Dev).
----
-## 🚀 How to run backend locally
-1. **Navigate to the backend directory:**
-   ```bash
-   cd backend
-Create and activate a virtual environment:
+# Sponsorship Hub
 
-Windows:
-bash
+Sponsorship Hub is a full-stack platform that connects sponsors, organizers, and influencers to manage discovery, deal flow, signing, payments, reviews, and operations.
+
+## Tech Stack
+- Backend: FastAPI + SQLAlchemy
+- Frontend: React + Vite
+- Database: PostgreSQL (recommended) or SQLite (local fallback)
+- Realtime: WebSocket notifications and chat
+- Payments: Razorpay order + webhook flow
+
+## Repository Structure
+- `backend/` FastAPI app, models, routers, tests
+- `frontend/` React app
+- `docs/` project documentation
+
+## Prerequisites
+- Python 3.10+
+- Node.js 18+
+- npm 9+
+
+## Quick Start
+
+### 1) Start backend
+From repository root:
+
+```powershell
 python -m venv .venv
-.venv\Scripts\activate
-Mac/Linux:
-bash
-python3 -m venv .venv
-source .venv/bin/activate
-Install the dependencies:
+.\.venv\Scripts\activate
+pip install -r backend/requirements.txt
+python -m uvicorn backend.main:app --reload
+```
 
-bash
-pip install -r requirements.txt
-Set up environment variables:
+Backend will be available at:
+- API: `http://localhost:8000`
+- Swagger docs: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
 
-Create a 
+### 2) Start frontend
+In a new terminal:
 
-.env
- file in the backend/ directory (see variables below).
-Start the server:
-
-bash
-uvicorn main:app --reload
-Available at http://localhost:8000 (API Docs at http://localhost:8000/docs)
-
-🎨 How to run frontend locally
-Navigate to the frontend directory:
-
-bash
+```powershell
 cd frontend
-Install node modules:
-
-bash
 npm install
-Start the development server:
-
-bash
 npm run dev
-Available at http://localhost:5173
+```
 
-🌍 Deployment instructions
-Backend Deployment (Render / Railway / DigitalOcean)
-Build command: pip install -r requirements.txt
-Start command: uvicorn main:app --host 0.0.0.0 --port $PORT
-Add all production environment variables to your host (especially DATABASE_URL pointing to your hosted PostgreSQL database and a strong SECRET_KEY).
-Ensure CORS_ORIGINS in your environment variables includes your deployed frontend URL.
-Frontend Deployment (Vercel / Netlify)
-Ensure the framework preset is set to Vite.
-Build command: npm run build
-Output directory: dist
-Add frontend environment variables (like VITE_API_URL pointing to your deployed FastAPI backend URL).
-🔐 Environment variables list
-Backend (backend/.env)
-env
+Frontend will be available at:
+- `http://localhost:5173`
+
+## Environment Variables
+
+### Backend (`backend/.env`)
+Only `SECRET_KEY` should always be set explicitly. Others are optional for local development.
+
+```env
 APP_NAME="Sponsorship Management"
-ENV="development" # Change to "production" when deployed
-# Security (Change in production)
-SECRET_KEY="your_super_secret_jwt_key_here"  
+DEBUG=false
+ENV="development"
+
+SECRET_KEY="replace_with_a_strong_secret"
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=7
-# Database (PostgreSQL or SQLite)
-DATABASE_URL="postgresql://user:password@localhost:5432/sponsorship_db"
-# CORS (Must match frontend URL in production)
-CORS_ORIGINS='["http://localhost:5173", "http://127.0.0.1:5173"]'
-# Razorpay (Payments)
+
+DATABASE_URL="sqlite:///./sponsorship.db"
+
 RAZORPAY_KEY_ID=""
 RAZORPAY_KEY_SECRET=""
 RAZORPAY_WEBHOOK_SECRET=""
-# SMTP (Email Notifications)
+
 SMTP_HOST="localhost"
 SMTP_PORT=1025
 SMTP_USER=""
 SMTP_PASS=""
 SMTP_FROM="noreply@sponsorship.com"
-Frontend (frontend/.env)
-env
+SMTP_USE_TLS=false
+SMTP_TIMEOUT_SECONDS=10
+
+FRONTEND_BASE_URL="http://localhost:5173"
+EMAIL_VERIFICATION_EXPIRE_HOURS=24
+
+AI_API_KEY=""
+AI_MODEL="gpt-4o-mini"
+AI_API_BASE_URL="https://api.openai.com/v1"
+AI_TIMEOUT_SECONDS=25
+
+CORS_ORIGINS='["http://localhost:5173","http://127.0.0.1:5173","http://localhost:5174","http://127.0.0.1:5174"]'
+```
+
+### Frontend (`frontend/.env`)
+
+```env
 VITE_API_URL="http://localhost:8000"
-VITE_WS_URL="ws://localhost:8000"
+```
+
+If `VITE_API_URL` is omitted, frontend falls back to `http://<current-host>:8000`.
+
+## Testing
+From repository root:
+
+```powershell
+pytest backend/tests -q
+```
+
+## Notes
+- Auth is cookie-based (`withCredentials: true` on frontend API client).
+- Deal payment completion is webhook-driven. Manual payment marking is disabled.
+- For production, configure `SECRET_KEY`, database, and Razorpay webhook secret before deployment.

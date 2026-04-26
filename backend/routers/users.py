@@ -27,13 +27,31 @@ def list_users(
     current_user: User = Depends(get_current_user)
 ):
     query = db.query(crud.models.User)
-    current_user_role = str(getattr(current_user, "role", ""))
+    current_user_role = str(getattr(current_user, "role", "")).lower()
     safe_limit = clamp_limit(limit, default=20, maximum=100)
     safe_skip = max(0, int(skip))
+    requested_role = str(role or "").strip().lower()
+    valid_roles = {"sponsor", "organizer", "influencer", "admin"}
 
-    if role:
-        query = query.filter(crud.models.User.role == role)
-    elif current_user_role != "admin":
+    if requested_role:
+        if requested_role not in valid_roles:
+            raise exceptions.ValidationError("Invalid role filter")
+
+        if current_user_role != "admin":
+            # Non-admins can only discover counterparties needed for marketplace/deal flows.
+            allowed_role_filters = {
+                "sponsor": {"organizer", "influencer"},
+                "organizer": {"sponsor"},
+                "influencer": {"sponsor"},
+            }
+            allowed_filters = allowed_role_filters.get(current_user_role, set())
+            if requested_role not in allowed_filters:
+                raise exceptions.AuthorizationError("You are not allowed to browse this user role")
+
+        query = query.filter(crud.models.User.role == requested_role)
+        return query.offset(safe_skip).limit(safe_limit).all()
+
+    if current_user_role != "admin":
         raise exceptions.AuthorizationError("Only admins can list all users. Please specify a role filter.")
 
     return query.offset(safe_skip).limit(safe_limit).all()

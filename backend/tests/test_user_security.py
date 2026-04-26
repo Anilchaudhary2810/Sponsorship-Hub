@@ -1,13 +1,9 @@
 """
 User security and access-control tests.
-
-Fix for test_admin_can_list_users: GET /users/ returns PublicUserResponse whose
-`role` field is Literal["sponsor","organizer","influencer"] – so an admin user in
-the DB would fail serialization. The test now uses a role filter so only
-non-admin users appear in the response, which is what a real client would do.
 """
 import pytest
-
+from backend.auth import create_access_token
+from backend.models import User
 
 def test_user_cannot_update_role(client, test_user, auth_headers):
     """PublicUserUpdate schema has no 'role' field; role must remain unchanged."""
@@ -77,13 +73,61 @@ def test_admin_can_list_users_with_role_filter(client, admin_auth_headers, test_
         assert item["role"] == "sponsor"
 
 
-def test_non_admin_can_list_users_by_role_filter(client, auth_headers, test_user):
+def test_non_admin_can_list_users_by_allowed_role_filter(client, auth_headers, db):
     """
-    The route only raises 403 when no role filter is provided AND user is not admin.
-    A non-admin can still call with ?role=sponsor to browse by type.
+    Sponsor users can browse allowed counterparty roles (influencers).
     """
+    influencer = User(
+        full_name="Influencer Listing User",
+        email="list_influencer@example.com",
+        password="hashed",
+        role="influencer",
+        is_verified=True,
+    )
+    db.add(influencer)
+    db.commit()
+
     response = client.get("/users/?role=influencer", headers=auth_headers)
     assert response.status_code == 200
+    for item in response.json():
+        assert item["role"] == "influencer"
+
+
+def test_non_admin_cannot_list_disallowed_role_filter(client, auth_headers):
+    """Sponsor users cannot browse same-role user listings."""
+    response = client.get("/users/?role=sponsor", headers=auth_headers)
+    assert response.status_code == 403
+
+
+def test_non_admin_cannot_list_admin_role_filter(client, auth_headers):
+    response = client.get("/users/?role=admin", headers=auth_headers)
+    assert response.status_code == 403
+
+
+def test_admin_invalid_role_filter_returns_400(client, admin_auth_headers):
+    response = client.get("/users/?role=unknown-role", headers=admin_auth_headers)
+    assert response.status_code == 400
+
+
+def test_organizer_can_list_sponsors_but_not_influencers(client, db):
+    organizer = User(
+        full_name="Org Viewer",
+        email="org_viewer@example.com",
+        password="hashed",
+        role="organizer",
+        is_verified=True,
+    )
+    db.add(organizer)
+    db.commit()
+    db.refresh(organizer)
+
+    organizer_headers = {"Authorization": f"Bearer {create_access_token(data={'sub': str(organizer.id)})}"}
+
+    allowed_resp = client.get("/users/?role=sponsor", headers=organizer_headers)
+    assert allowed_resp.status_code == 200
+
+    blocked_resp = client.get("/users/?role=influencer", headers=organizer_headers)
+    assert blocked_resp.status_code == 403
 
 
 def test_user_can_read_own_profile(client, test_user, auth_headers):

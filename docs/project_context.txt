@@ -1,12 +1,1 @@
 python -m uvicorn backend.main:app --reload
-
-1.Activation funnel: guided onboarding per role (first event/campaign/deal checklist + progress meter).
-2.Trust layer: verified badges with document/KYC workflow + fraud/risk flags.
-3.Smart matching: sponsor-event-creator recommendations based on goals, niche, geo, budget.
-4.Proposal quality tools: reusable deal templates, approval flow, negotiation history.
-5.Revenue confidence: escrow-like payment states, milestone payouts, dispute workflow.
-6.Team collaboration: multi-user workspaces, roles/permissions (owner, manager, finance, viewer).
-7.Retention engine: lifecycle nudges (pending signatures, expiring deals, inactive opportunities).
-8.Reporting for decision-makers: ROI dashboard, campaign outcome exports, monthly executive reports.
-9.Integrations: CRM (HubSpot), sheets export, Slack/Email alerts, calendar sync.
-10.Mobile-first ops: tighter responsive dashboard and faster “quick actions” for high-frequency tasks.

@@ -1,12 +1,14 @@
 from __future__ import annotations
 import datetime
-from pydantic import BaseModel, EmailStr, validator, ConfigDict, Field
+from pydantic import BaseModel, EmailStr, validator, model_validator, ConfigDict, Field
 from typing import Optional, List, Literal, Any
 from decimal import Decimal
 
 # Literal Types
+# Participant roles are used for deal/review actions.
 RoleType = Literal["sponsor", "organizer", "influencer"]
-PaymentByType = Literal["organizer", "sponsor", "influencer"]
+# User roles also include platform admins for auth/profile serialization.
+UserRoleType = Literal["sponsor", "organizer", "influencer", "admin"]
 DealType = Literal["sponsorship", "promotion"]
 
 # ------------------------------------------------
@@ -23,7 +25,7 @@ class UserBase(BaseModel):
     full_name: str
     email: EmailStr
     phone: Optional[str] = None
-    role: RoleType
+    role: UserRoleType
     state: Optional[str] = None
     city: Optional[str] = None
     company_name: Optional[str] = None
@@ -77,7 +79,7 @@ class PublicUserUpdate(BaseModel):
 
 class AdminUserUpdate(PublicUserUpdate):
     is_verified: Optional[bool] = None
-    role: Optional[RoleType] = None
+    role: Optional[UserRoleType] = None
     trust_score: Optional[Decimal] = None
     verification_badge: Optional[bool] = None
 
@@ -105,7 +107,7 @@ class UserResponse(UserBase):
 class PublicUserResponse(BaseModel):
     id: int
     full_name: str
-    role: RoleType
+    role: UserRoleType
     city: Optional[str] = None
     state: Optional[str] = None
     company_name: Optional[str] = None
@@ -266,7 +268,38 @@ class DealBase(BaseModel):
     deal_type: DealType
 
 class DealCreate(DealBase):
-    pass
+    @model_validator(mode="after")
+    def validate_deal_structure(self):
+        role_ids = [pid for pid in (self.sponsor_id, self.organizer_id, self.influencer_id) if pid is not None]
+        if len(set(role_ids)) != len(role_ids):
+            raise ValueError("Deal participants must be distinct users")
+
+        for field_name, field_value in (
+            ("sponsor_id", self.sponsor_id),
+            ("organizer_id", self.organizer_id),
+            ("influencer_id", self.influencer_id),
+            ("event_id", self.event_id),
+            ("campaign_id", self.campaign_id),
+        ):
+            if field_value is not None and field_value <= 0:
+                raise ValueError(f"{field_name} must be a positive integer")
+
+        if self.deal_type == "sponsorship":
+            if self.sponsor_id is None or self.organizer_id is None:
+                raise ValueError("Sponsorship deals require sponsor_id and organizer_id")
+            if self.influencer_id is not None:
+                raise ValueError("Sponsorship deals cannot include influencer_id")
+            if self.campaign_id is not None:
+                raise ValueError("Sponsorship deals cannot include campaign_id")
+        elif self.deal_type == "promotion":
+            if self.sponsor_id is None or self.influencer_id is None:
+                raise ValueError("Promotion deals require sponsor_id and influencer_id")
+            if self.organizer_id is not None:
+                raise ValueError("Promotion deals cannot include organizer_id")
+            if self.event_id is not None:
+                raise ValueError("Promotion deals cannot include event_id")
+
+        return self
 
 class DealUpdate(BaseModel):
     # Only non-critical fields can be updated directly via generic PUT
@@ -319,13 +352,6 @@ class DealResponse(DealBase):
 class DealAccept(BaseModel):
     role: RoleType
     accept: bool
-
-class DealPayment(BaseModel):
-    amount: Decimal
-    currency: Optional[str] = "INR"
-    payment_by: PaymentByType
-    method: Optional[str] = None
-    details: Optional[dict] = None
 
 class PaymentCheckoutConfigResponse(BaseModel):
     provider: str = "razorpay"

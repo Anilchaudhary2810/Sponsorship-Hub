@@ -290,6 +290,57 @@ a {
   opacity: 0.75;
 }
 
+/* Shared horizontal rail layout for dashboard pipeline + marketplace strips */
+.horizontal-scroll-container {
+  overflow: visible;
+}
+
+.dashboard-section-wide .h-scroll-grid {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 24px;
+  padding: 6px 2px 18px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dashboard-section-wide .h-scroll-grid > * {
+  flex: 0 0 min(360px, 88vw);
+  scroll-snap-align: start;
+}
+
+.dashboard-section-wide .h-scroll-grid > .empty-state {
+  flex: 0 0 100%;
+  min-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .dashboard-section-wide .h-scroll-grid {
+    gap: 16px;
+    padding: 10px 4px 25px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin-left: -5px;
+    margin-right: -5px;
+  }
+
+  .dashboard-section-wide .h-scroll-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard-section-wide .h-scroll-grid > * {
+    min-width: 280px;
+    flex: 0 0 auto;
+    scroll-snap-align: center;
+  }
+
+  .dashboard-section-wide .h-scroll-grid > .empty-state {
+    min-width: 100%;
+  }
+}
+
 /* Shared proposal/apply modal styles for consistent flows across dashboards */
 .proposal-modal-overlay {
   position: fixed;

@@ -41,6 +41,16 @@
   cursor: pointer;
 }
 
+.scale-ops-header-actions button:focus-visible,
+.scale-ops-tab-row button:focus-visible,
+.scale-ops-card button:focus-visible,
+.scale-ops-card input:focus-visible,
+.scale-ops-card select:focus-visible,
+.scale-ops-card textarea:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 58%, white);
+  outline-offset: 2px;
+}
+
 .scale-ops-header-actions button:hover,
 .scale-ops-card button:hover {
   border-color: var(--primary);
@@ -162,6 +172,10 @@
   margin-top: 10px;
 }
 
+.list-block.compact {
+  margin-top: 8px;
+}
+
 .line-item {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -223,6 +237,56 @@
   grid-template-columns: 2fr auto auto;
 }
 
+.admin-ops-layout {
+  gap: 18px;
+}
+
+.admin-hero-card {
+  background: color-mix(in srgb, var(--card) 90%, var(--primary) 10%);
+}
+
+.admin-module-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.admin-module-chip {
+  border: 1px solid color-mix(in srgb, var(--primary) 38%, var(--border));
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 14%, var(--card));
+}
+
+.admin-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.admin-summary-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+}
+
+.admin-summary-card small {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  margin-bottom: 4px;
+}
+
+.admin-summary-card strong {
+  font-size: 1rem;
+}
+
 .kyc-review-row {
   align-items: flex-start;
 }
@@ -237,6 +301,30 @@
   color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+.coming-soon-card {
+  border-style: dashed;
+}
+
+.coming-soon-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.coming-soon-item {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+}
+
+.coming-soon-item p {
+  margin: 4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.84rem;
 }
 
 .muted-line {
@@ -255,6 +343,11 @@
   }
 
   .admin-inline-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-summary-grid,
+  .coming-soon-grid {
     grid-template-columns: 1fr;
   }
 }

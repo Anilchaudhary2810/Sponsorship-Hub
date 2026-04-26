@@ -116,6 +116,14 @@ function App() {
             )}
           />
           <Route
+            path="/admin"
+            element={(
+              <PrivateRoute role="admin">
+                <ScaleOpsPage />
+              </PrivateRoute>
+            )}
+          />
+          <Route
             path="/sponsor-dashboard"
             element={(
               <PrivateRoute role="sponsor">

@@ -37,14 +37,20 @@
   align-items: center;
   gap: 16px;
   padding: 20px;
+  min-height: 112px;
   border-radius: 16px;
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s ease;
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 22px rgba(var(--shadow-color), 0.12);
+  backdrop-filter: blur(10px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .kpi-card:hover {
   transform: translateY(-3px);
+  border-color: color-mix(in oklab, var(--primary) 34%, var(--border) 66%);
+  box-shadow: 0 14px 30px rgba(var(--shadow-color), 0.16);
 }
 
 .kpi-indigo  { background: linear-gradient(135deg, hsla(var(--color-primary), 0.15), hsla(var(--color-primary), 0.05)); border: 1px solid hsla(var(--color-primary), 0.25); }
@@ -55,6 +61,10 @@
 .kpi-icon {
   font-size: 28px;
   flex-shrink: 0;
+}
+
+.kpi-info {
+  min-width: 0;
 }
 
 .kpi-value {

@@ -32,6 +32,10 @@ import {
 import ReviewModal from "../components/ReviewModal";
 import DocumentViewer from "../components/DocumentViewer";
 
+const logOrganizerError = (scope, err) => {
+  console.error(`[OrganizerDashboard] ${scope}`, err);
+};
+
 const OrganizerDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -101,8 +105,12 @@ const OrganizerDashboard = () => {
           map[Number(dealId)] = rating;
         });
         setReviewedDeals(prev => ({ ...prev, ...map }));
-      } catch {}
-    } catch (err) {}
+      } catch (err) {
+        logOrganizerError("failed to load review history", err);
+      }
+    } catch (err) {
+      logOrganizerError("failed to load dashboard data", err);
+    }
   };
 
   const setEventsDay = (rawEvents) => {
@@ -181,7 +189,8 @@ const OrganizerDashboard = () => {
       setIsCreateEventOpen(false);
       toast.success("Event Published!");
     } catch (err) {
-      // toast shown by api interceptor
+      // Toast may already be shown by API interceptor.
+      logOrganizerError("failed to create event", err);
     } finally { setIsSubmitting(false); }
   };
 
@@ -194,7 +203,9 @@ const OrganizerDashboard = () => {
       await actionFn(dealId, payload);
       await refreshDeals();
       toast.success("Pipeline Updated");
-    } catch {
+    } catch (err) {
+      logOrganizerError("failed to update deal action", err);
+      toast.error("Unable to update deal right now.");
     } finally { setIsSubmitting(false); }
   };
 
@@ -203,7 +214,10 @@ const OrganizerDashboard = () => {
       await deleteEvent(eventToDelete);
       const resp = await fetchEvents();
       setEventsDay(resp.data);
-    } catch {}
+    } catch (err) {
+      logOrganizerError("failed to delete event", err);
+      toast.error("Unable to delete event.");
+    }
     setIsDeleteDialogOpen(false);
   };
 
@@ -231,7 +245,10 @@ const OrganizerDashboard = () => {
       setReviewDeal(null);
       toast.success("Review submitted! Thank you.");
       loadData();
-    } catch {}
+    } catch (err) {
+      logOrganizerError("failed to submit review", err);
+      toast.error("Unable to submit review.");
+    }
   };
 
   const getDealPartnerName = (deal) => deal.sponsorName || "Sponsor";
@@ -281,7 +298,10 @@ const OrganizerDashboard = () => {
       await updateEvent(eventId, { media_items: [...currentItems, mediaItem] });
       toast.success("Media added!");
       loadData();
-    } catch {}
+    } catch (err) {
+      logOrganizerError(`failed to add media for event #${eventId}`, err);
+      toast.error("Unable to add media.");
+    }
   };
 
   const handleDeleteMedia = async (eventId, index) => {
@@ -292,7 +312,10 @@ const OrganizerDashboard = () => {
       await updateEvent(eventId, { media_items: updated });
       toast.success("Media removed.");
       loadData();
-    } catch {}
+    } catch (err) {
+      logOrganizerError(`failed to delete media for event #${eventId}`, err);
+      toast.error("Unable to remove media.");
+    }
   };
 
   const stats = [
@@ -335,7 +358,8 @@ const OrganizerDashboard = () => {
         const fresh = mapDealData(resp.data, currentUser);
         setSelectedPipelineDeal(fresh);
       })
-      .catch(() => {
+      .catch((err) => {
+        logOrganizerError(`failed to refresh deal #${dealId} details`, err);
         setSelectedPipelineDeal(deal);
       });
   };
@@ -380,11 +404,6 @@ const OrganizerDashboard = () => {
             <button className="create-primary-btn" onClick={() => setIsCreateEventOpen(!isCreateEventOpen)}>
               {isCreateEventOpen ? "Close Form" : "+ Create New Event"}
             </button>
-            <div className="header-filters">
-              <select value={selectedState} onChange={(e) => setSelectedState(e.target.value)} className="horizontal-select">
-                {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
           </div>
         </header>
 
@@ -467,7 +486,7 @@ const OrganizerDashboard = () => {
               <span className="badge">{visiblePipelineDeals.length} Total</span>
             </div>
             <div className="horizontal-scroll-container">
-              <div className="deal-pipeline-grid">
+              <div className="deal-pipeline-grid h-scroll-grid">
                 {latestPipelineDeals.map(deal => (
                   <DealCard key={deal.id} deal={deal}>
                     <div className="deal-card-content-wide">
@@ -605,7 +624,7 @@ const OrganizerDashboard = () => {
                   </div>
                 )}
               </div>
-              <div className="sponsor-horizontal-grid">
+              <div className="sponsor-horizontal-grid h-scroll-grid">
                 {latestSponsors.map(s => (
                   <div key={s.id} className="sponsor-card-modern">
                     <div className="sponsor-badge">Sponsor</div>
@@ -659,7 +678,14 @@ const OrganizerDashboard = () => {
                       >
                         {selectedEventForMedia === e.id ? "Close Gallery" : "Gallery"}
                       </button>
-                      <button className="delete-action-pill" onClick={() => { setEventToDelete(e.id); setIsDeleteDialogOpen(true); }} title="Remove Event">Delete</button>
+                      <button
+                        className="delete-action-pill"
+                        onClick={() => { setEventToDelete(e.id); setIsDeleteDialogOpen(true); }}
+                        title="Remove Event"
+                        aria-label="Delete event"
+                      >
+                        <span className="trash-icon" aria-hidden="true">🗑</span>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -747,6 +773,8 @@ const OrganizerDashboard = () => {
                     setIsSponsorDetailsOpen(false);
                     toast.success("Partnership Proposal Sent!");
                   } catch (err) {
+                    logOrganizerError("failed to send sponsor proposal", err);
+                    toast.error("Unable to send proposal.");
                   } finally { setIsSubmitting(false); }
                 }}
               >

@@ -274,26 +274,6 @@ def deal_payment_webhook(db: Session, deal_id: int, payment_id: str, status: str
     return deal
 
 
-def deal_payment(db: Session, deal_id: int, payment: schemas.DealPayment):
-    deal = get_deal(db, deal_id)
-    if not deal:
-        return None
-        
-    if deal.status != "payment_pending":
-        raise exceptions.BusinessLogicError(f"Cannot process payment for deal in {deal.status} state")
-
-    # Never trust client-provided payment amount/currency for settlement state.
-    # Settlement amount must remain the server-side deal value.
-    _ = payment
-    deal.payment_done = True
-    deal.payment_timestamp = datetime.utcnow()
-    deal.status = "signing_pending"
-    
-    db.commit()
-    db.refresh(deal)
-    return deal
-
-
 def deal_sign(db: Session, deal_id: int, sign: schemas.DealSign):
     deal = get_deal(db, deal_id)
     if not deal:
